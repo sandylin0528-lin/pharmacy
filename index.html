@@ -241,7 +241,7 @@ canvas#sigCanvas{display:block;width:100%;height:130px;cursor:crosshair;touch-ac
         </div>
         <div class="field">
           <label class="label">院區 <span class="req">*</span></label>
-          <select class="sel inp" id="f-campus">
+          <select class="sel inp" id="f-campus" onchange="onCampusChange('f')">
             <option value="">請選擇院區</option>
             <option value="douliou">斗六院區</option>
             <option value="huwei">虎尾院區</option>
@@ -621,7 +621,7 @@ canvas#sigCanvas{display:block;width:100%;height:130px;cursor:crosshair;touch-ac
         </div>
         <div class="field">
           <label class="label">院區 <span class="req">*</span></label>
-          <select class="sel inp" id="cf-campus">
+          <select class="sel inp" id="cf-campus" onchange="onCampusChange('cf')">
             <option value="">請選擇院區</option>
             <option value="douliou">斗六院區</option>
             <option value="huwei">虎尾院區</option>
@@ -842,21 +842,42 @@ function renderUnitDropdown(prefix, keyword) {
   const dropdown = document.getElementById(`${prefix}-unit-dropdown`);
   if (!dropdown) return;
   const kw = keyword.trim().toLowerCase();
-  const filtered = kw
-    ? unitOptions.filter(u => u.label.toLowerCase().includes(kw))
-    : unitOptions;
+  
+  // 取得目前選的院區
+  const campusEl = document.getElementById(`${prefix}-campus`);
+  const campusVal = campusEl ? campusEl.value : '';
+  const campusMap = { douliou:'斗六院區', huwei:'虎尾院區' };
+  const selectedCampus = campusMap[campusVal] || '';
+
+  let filtered = unitOptions;
+  // 先用院區篩選
+  if (selectedCampus) {
+    filtered = filtered.filter(u => u.campus === selectedCampus);
+  }
+  // 再用關鍵字篩選
+  if (kw) {
+    filtered = filtered.filter(u => u.label.toLowerCase().includes(kw));
+  }
 
   if (filtered.length === 0) {
-    dropdown.innerHTML = `<div class="unit-no-result">找不到符合的單位</div>`;
+    dropdown.innerHTML = `<div class="unit-no-result">${selectedCampus ? '該院區找不到符合的單位' : '找不到符合的單位'}</div>`;
     return;
   }
   dropdown.innerHTML = filtered.map(u => {
     const highlighted = kw
       ? u.label.replace(new RegExp(`(${kw})`, 'gi'), '<mark>$1</mark>')
       : u.label;
-    const campusTag = u.campus ? `<span style="font-size:10px;color:var(--hint);margin-left:6px">${u.campus==='PHR'?'斗六':'虎尾'}</span>` : '';
+    const campusTag = !selectedCampus && u.campus ? `<span style="font-size:10px;color:var(--hint);margin-left:6px">${u.campus}</span>` : '';
     return `<div class="unit-option" onmousedown="selectUnit('${prefix}','${u.label.replace(/'/g,"\\'")}','${u.campus}')">${highlighted}${campusTag}</div>`;
   }).join('');
+}
+
+function onCampusChange(prefix) {
+  // 院區改變時清空已選單位
+  document.getElementById(`${prefix}-unit`).value = '';
+  const unitInput = document.getElementById(`${prefix}-unit-input`);
+  if (unitInput) unitInput.value = '';
+  renderUnitDropdown(prefix, '');
 }
 
 function filterUnits(prefix) {
