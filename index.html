@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>常備藥／急救藥申請管理平台</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ===== RESET & BASE ===== */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f0;--surface:#ffffff;--surface2:#f0efe9;--surface3:#e8e7e0;
+  --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.16);
+  --text:#1c1c1a;--muted:#65645f;--hint:#a09f98;
+  --teal:#0d6b52;--teal-mid:#1a9470;--teal-light:#dff2ea;--teal-dark:#084d3b;
+  --amber:#a86d10;--amber-light:#fef3dc;
+  --red:#9b2828;--red-light:#fdeaea;
+  --blue:#1557a0;--blue-light:#e5f0fb;
+  --purple:#4b43b0;--purple-light:#eeedfb;
+  --green:#2e6510;--green-light:#e8f4de;
+  --coral:#8f3218;--coral-light:#faece5;
+  --r:10px;--r-sm:6px;--r-lg:14px;
+  --shadow:0 1px 3px rgba(0,0,0,.07),0 2px 8px rgba(0,0,0,.04);
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#181816;--surface:#222220;--surface2:#2a2a27;--surface3:#323230;
+    --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.15);
+    --text:#e5e3da;--muted:#9c9a92;--hint:#5e5d57;
+    --teal-light:#073d2e;--amber-light:#3d2700;--red-light:#3b0f0f;
+    --blue-light:#071e3d;--purple-light:#1e1b4a;--green-light:#0f2906;--coral-light:#3a1208;
+  }
+}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+input,select,textarea,button{font-family:inherit;font-size:14px}
+input[type=date]::-webkit-calendar-picker-indicator{opacity:.5}
+
+/* ===== LAYOUT ===== */
+.app{display:flex;flex-direction:column;min-height:100vh}
+.header{background:var(--surface);border-bottom:0.5px solid var(--border2);position:sticky;top:0;z-index:100;display:flex;align-items:center;padding:0 24px;gap:0}
+.logo-wrap{display:flex;align-items:center;gap:10px;padding:13px 20px 13px 0;border-right:0.5px solid var(--border);margin-right:20px}
+.logo-box{width:34px;height:34px;background:var(--teal);border-radius:9px;display:grid;place-items:center;font-size:18px;flex-shrink:0}
+.logo-text h1{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.logo-text p{font-size:11px;color:var(--muted)}
+.nav{display:flex;gap:2px;flex:1}
+.nav-btn{padding:7px 14px;border:none;background:none;color:var(--muted);cursor:pointer;font-size:13px;border-radius:var(--r-sm);transition:all .14s;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.nav-btn:hover{background:var(--surface2);color:var(--text)}
+.nav-btn.active{background:var(--teal-light);color:var(--teal);font-weight:500}
+.nav-btn .cnt{background:var(--coral);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:600}
+.main-content{flex:1;padding:28px 28px 48px;max-width:1000px;margin:0 auto;width:100%}
+
+/* ===== CARDS ===== */
+.card{background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--r-lg);box-shadow:var(--shadow);margin-bottom:18px;overflow:hidden}
+.card-hd{padding:16px 22px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-hd-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card-body{padding:22px}
+
+/* ===== TABS ===== */
+.tabs{display:flex;border-bottom:0.5px solid var(--border);background:var(--surface2)}
+.tab{padding:10px 18px;border:none;background:none;color:var(--muted);cursor:pointer;font-size:13px;border-bottom:2px solid transparent;margin-bottom:-0.5px;transition:all .14s}
+.tab.active{color:var(--teal);border-bottom-color:var(--teal);font-weight:500;background:var(--surface)}
+
+/* ===== FORM ===== */
+.section-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;padding-bottom:8px;border-bottom:0.5px solid var(--border)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.full{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:5px}
+.label{font-size:12px;color:var(--muted);font-weight:500}
+.label .req{color:var(--coral)}
+.inp,.sel,.ta{
+  padding:8px 12px;border:0.5px solid var(--border2);border-radius:var(--r-sm);
+  background:var(--surface);color:var(--text);transition:border .14s;outline:none;width:100%
+}
+.inp:focus,.sel,.ta:focus{border-color:var(--teal-mid);box-shadow:0 0 0 2.5px rgba(13,107,82,.1)}
+.sel{cursor:pointer}
+.ta{resize:vertical;min-height:85px;line-height:1.6}
+.inp[readonly]{background:var(--surface2);color:var(--hint);cursor:default}
+.radio-group,.check-group{display:flex;flex-wrap:wrap;gap:10px}
+.radio-item,.check-item{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px}
+.radio-item input,.check-item input{accent-color:var(--teal);cursor:pointer}
+
+/* ===== DRUG TABLE ===== */
+.dtbl{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px}
+.dtbl th{padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);background:var(--surface2);border-bottom:0.5px solid var(--border)}
+.dtbl td{padding:6px 8px;border-bottom:0.5px solid var(--border);vertical-align:middle}
+.dtbl tr:last-child td{border-bottom:none}
+.dtbl input{padding:5px 8px;border:0.5px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-size:12px;width:100%}
+.dtbl input:focus{border-color:var(--teal-mid);outline:none}
+.add-row{width:100%;padding:7px;border:0.5px dashed var(--border2);border-radius:var(--r-sm);background:none;color:var(--muted);cursor:pointer;font-size:12px;transition:all .14s}
+.add-row:hover{background:var(--surface2);color:var(--text);border-color:var(--teal-mid)}
+.del-btn{padding:3px 8px;border:0.5px solid var(--border);border-radius:4px;background:none;color:var(--hint);cursor:pointer;font-size:11px;transition:all .12s}
+.del-btn:hover{background:var(--red-light);color:var(--red);border-color:var(--red)}
+
+/* ===== BUTTONS ===== */
+.btn{padding:8px 20px;border-radius:var(--r-sm);border:0.5px solid var(--border2);background:none;color:var(--text);cursor:pointer;font-size:13px;font-weight:400;transition:all .14s}
+.btn:hover{background:var(--surface2)}
+.btn-primary{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn-primary:hover{background:var(--teal-dark)}
+.btn-sm{padding:5px 14px;font-size:12px}
+.btn-danger{background:var(--red-light);color:var(--red);border-color:var(--red)}
+.btn-group{display:flex;gap:10px;justify-content:flex-end;padding-top:18px;border-top:0.5px solid var(--border);margin-top:18px;align-items:center}
+
+/* ===== BADGES ===== */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500}
+.b-pending{background:var(--amber-light);color:var(--amber)}
+.b-done{background:var(--teal-light);color:var(--teal)}
+.b-review{background:var(--blue-light);color:var(--blue)}
+.b-new{background:var(--purple-light);color:var(--purple)}
+.b-reject{background:var(--red-light);color:var(--red)}
+.b-green{background:var(--green-light);color:var(--green)}
+
+/* ===== SIGN FLOW ===== */
+.sign-flow{display:flex;flex-direction:column;gap:0}
+.sign-step{display:flex;gap:14px;position:relative;padding-bottom:20px}
+.sign-step:last-child{padding-bottom:0}
+.sign-step:not(:last-child)::before{content:'';position:absolute;left:15px;top:32px;bottom:0;width:1px;background:var(--border2)}
+.sign-circle{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:12px;flex-shrink:0;border:0.5px solid var(--border2);font-weight:600}
+.sc-done{background:var(--teal);color:#fff;border-color:var(--teal)}
+.sc-active{background:var(--amber-light);color:var(--amber);border-color:var(--amber)}
+.sc-wait{background:var(--surface2);color:var(--hint)}
+.sign-info{flex:1;padding-top:3px}
+.sign-name{font-size:13px;font-weight:600}
+.sign-role{font-size:11px;color:var(--muted)}
+.sign-time{font-size:11px;color:var(--hint);margin-top:2px}
+.sign-action{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sig-display{font-style:italic;font-size:17px;color:var(--teal);border-bottom:1.5px solid var(--teal);padding:0 6px 1px;min-width:70px;text-align:center;letter-spacing:.02em}
+.sign-btn{padding:5px 16px;border:0.5px solid var(--teal);border-radius:var(--r-sm);background:var(--teal-light);color:var(--teal);cursor:pointer;font-size:12px;font-weight:500;transition:all .14s}
+.sign-btn:hover{background:var(--teal);color:#fff}
+
+/* ===== INFO BOX ===== */
+.info-box{background:var(--blue-light);border:0.5px solid rgba(21,87,160,.2);border-radius:var(--r-sm);padding:10px 14px;font-size:12px;color:var(--blue);display:flex;gap:8px;align-items:flex-start;line-height:1.6}
+
+/* ===== LIST TABLE ===== */
+.list-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.list-tbl th{padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);background:var(--surface2);border-bottom:0.5px solid var(--border)}
+.list-tbl td{padding:11px 14px;border-bottom:0.5px solid var(--border);vertical-align:middle}
+.list-tbl tr:hover td{background:var(--surface2)}
+.list-tbl tr:last-child td{border-bottom:none}
+.progress-dots{display:flex;gap:4px}
+.dot{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:9px;font-weight:700}
+.dot-done{background:var(--teal);color:#fff}
+.dot-active{background:var(--amber-light);color:var(--amber);border:1px solid var(--amber)}
+.dot-wait{background:var(--surface2);color:var(--hint);border:0.5px solid var(--border)}
+.link-btn{background:none;border:none;color:var(--blue);cursor:pointer;font-size:13px;padding:0;text-decoration:underline}
+
+/* ===== STATS ===== */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
+.stat-lbl{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:8px}
+.stat-val{font-size:28px;font-weight:600;line-height:1;letter-spacing:-.02em}
+.stat-sub{font-size:11px;color:var(--hint);margin-top:5px}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.chart-wrap{position:relative;height:220px}
+
+/* ===== MODAL ===== */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
+.modal{background:var(--surface);border-radius:var(--r-lg);padding:26px;width:400px;max-width:100%;border:0.5px solid var(--border2);box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:6px}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+.sig-canvas-wrap{border:0.5px solid var(--border2);border-radius:var(--r-sm);background:var(--surface2);overflow:hidden;position:relative}
+canvas#sigCanvas{display:block;width:100%;height:130px;cursor:crosshair;touch-action:none}
+.sig-hint{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;font-size:12px;color:var(--hint);opacity:1;transition:opacity .2s}
+
+/* ===== TOAST ===== */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--teal-dark);color:#fff;padding:11px 22px;border-radius:var(--r);font-size:13px;z-index:300;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ===== EMAIL CONFIG PANEL ===== */
+.config-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:11px;border:0.5px solid var(--border);background:var(--surface2);cursor:pointer;color:var(--muted);transition:all .14s}
+.config-pill:hover{border-color:var(--teal);color:var(--teal)}
+
+/* ===== EMPTY STATE ===== */
+.empty{text-align:center;padding:48px 24px;color:var(--hint)}
+.empty-icon{font-size:36px;margin-bottom:12px}
+.empty p{font-size:13px}
+
+/* ===== UNIT SEARCH DROPDOWN ===== */
+.unit-search-wrap{position:relative}
+.unit-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--teal);border-radius:var(--r-sm);box-shadow:0 6px 20px rgba(0,0,0,.15);z-index:100;max-height:240px;overflow-y:auto}
+.unit-option{padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:0.5px solid var(--border);transition:background .1s}
+.unit-option:last-child{border-bottom:none}
+.unit-option:hover,.unit-option.highlighted{background:var(--surface2);color:var(--teal)}
+.unit-option mark{background:none;color:var(--teal);font-weight:600}
+.unit-no-result{padding:12px 14px;font-size:12px;color:var(--hint);text-align:center}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:680px){
+  .main-content{padding:16px}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .chart-grid{grid-template-columns:1fr}
+  .header{padding:0 14px;flex-wrap:wrap}
+  .nav{flex-wrap:wrap;padding:6px 0}
+  .nav-btn{padding:5px 10px;font-size:12px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ===== HEADER ===== -->
+<header class="header">
+  <div class="logo-wrap">
+    <div class="logo-box">💊</div>
+    <div class="logo-text">
+      <h1>藥品申請管理平台</h1>
+      <p>常備藥 · 急救藥 · 不計價藥品 · 管制藥品</p>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn active" id="nav-form" onclick="showPage('form')">📋 新增申請</button>
+    <button class="nav-btn" id="nav-list" onclick="showPage('list')">📂 申請紀錄 <span class="cnt" id="cnt-list">0</span></button>
+    <button class="nav-btn" id="nav-sign" onclick="showPage('sign')">✍️ 待簽核 <span class="cnt" id="cnt-sign">0</span></button>
+    <button class="nav-btn" id="nav-dash" onclick="showPage('dash')">📊 統計儀表板</button>
+    <button class="nav-btn" id="nav-cfg" onclick="showPage('cfg')" style="margin-left:auto">⚙️ Email 設定</button>
+  </nav>
+</header>
+
+<!-- ===== MAIN ===== -->
+<main class="main-content">
+
+<!-- ======== PAGE: FORM ======== -->
+<div id="page-form">
+  <div class="card">
+    <div class="card-hd">
+      <div class="card-hd-title">📋 常備藥 / 急救藥 申請單</div>
+      <span class="badge b-new">新申請</span>
+    </div>
+    <div class="card-body">
+
+      <!-- Section 1 -->
+      <div class="section-label">① 申請基本資料</div>
+      <div class="grid2" style="margin-bottom:16px">
+        <div class="field">
+          <label class="label">申請日期 <span class="req">*</span></label>
+          <input type="date" class="inp" id="f-date">
+        </div>
+        <div class="field">
+          <label class="label">院區 <span class="req">*</span></label>
+          <select class="sel inp" id="f-campus">
+            <option value="">請選擇院區</option>
+            <option value="douliou">斗六院區</option>
+            <option value="huwei">虎尾院區</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="label">申請人姓名 <span class="req">*</span></label>
+          <input type="text" class="inp" id="f-applicant" placeholder="請輸入申請人姓名">
+        </div>
+        <div class="field">
+          <label class="label">分機號碼 <span class="req">*</span></label>
+          <input type="text" class="inp" id="f-ext" placeholder="例：12345">
+        </div>
+        <div class="field full">
+          <label class="label">申請單位 <span class="req">*</span></label>
+          <div class="unit-search-wrap" id="f-unit-wrap">
+            <input type="text" class="inp" id="f-unit-input" placeholder="輸入關鍵字搜尋單位…" autocomplete="off"
+              oninput="filterUnits('f')" onfocus="showUnitDropdown('f')" onblur="hideUnitDropdown('f')">
+            <input type="hidden" id="f-unit">
+            <div class="unit-dropdown" id="f-unit-dropdown" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:16px">
+        <label class="label">申請項目 <span class="req">*</span>　<span style="font-size:11px;color:var(--hint);font-weight:400">（管制藥品請獨立填寫申請）</span></label>
+        <div class="radio-group">
+          <label class="radio-item"><input type="radio" name="drug-type" id="t-regular" value="regular" checked> 常備藥</label>
+          <label class="radio-item"><input type="radio" name="drug-type" id="t-emergency" value="emergency"> 急救藥</label>
+          <label class="radio-item"><input type="radio" name="drug-type" id="t-free" value="free"> 不計價藥品</label>
+          <label class="radio-item">
+            <input type="radio" name="drug-type" id="t-controlled" value="controlled" onchange="onControlledCheck(this)">
+            <span style="color:var(--coral);font-weight:500">⚠️ 管制藥品</span>
+          </label>
+        </div>
+        <!-- Controlled drug alert -->
+        <div id="controlled-alert" style="display:none;margin-top:10px;background:var(--coral-light);border:0.5px solid rgba(143,50,24,.25);border-radius:var(--r-sm);padding:12px 14px;font-size:12px;color:var(--coral)">
+          <strong>⚠️ 管制藥品需獨立填寫申請單</strong><br>
+          系統將開啟管制藥品專用申請單（與本表單相同格式，藥品欄位請填寫管制藥品）。<br>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn btn-sm" style="background:var(--coral);color:#fff;border-color:var(--coral)" onclick="openControlledForm()">🔐 開啟管制藥品申請單 →</button>
+            <button class="btn btn-sm" onclick="cancelControlled()">取消</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:16px">
+        <label class="label">異動項目 <span class="req">*</span></label>
+        <div class="radio-group">
+          <label class="radio-item"><input type="radio" name="chg" value="qty" checked> 修改基本量</label>
+          <label class="radio-item"><input type="radio" name="chg" value="add"> 新增於書記入帳畫面</label>
+          <label class="radio-item"><input type="radio" name="chg" value="remove"> 自書記入帳畫面取消</label>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:20px">
+        <label class="label">申請原因 <span class="req">*</span></label>
+        <div class="radio-group" style="margin-bottom:10px">
+          <label class="radio-item"><input type="radio" name="reason-type" value="increase" id="rt-increase" onchange="onReasonTypeChange()"> 📈 使用量增加（＋）</label>
+          <label class="radio-item"><input type="radio" name="reason-type" value="decrease" id="rt-decrease" onchange="onReasonTypeChange()"> 📉 使用量減少（－）</label>
+          <label class="radio-item"><input type="radio" name="reason-type" value="business" id="rt-business" onchange="onReasonTypeChange()"> 🏥 業務需求增加</label>
+          <label class="radio-item"><input type="radio" name="reason-type" value="other" id="rt-other" onchange="onReasonTypeChange()"> 其他</label>
+        </div>
+        <div id="reason-hint" style="font-size:12px;color:var(--muted);margin-bottom:8px;display:none"></div>
+      </div>
+
+      <!-- Section 2 -->
+      <div class="section-label">② 申請藥品明細</div>
+      <table class="dtbl">
+        <thead>
+          <tr>
+            <th style="width:44px">#</th>
+            <th>藥品名稱（含規格）</th>
+            <th style="width:110px">變更前基本量</th>
+            <th style="width:110px">變更後基本量</th>
+            <th style="width:48px"></th>
+          </tr>
+        </thead>
+        <tbody id="drug-tbody"></tbody>
+      </table>
+      <button class="add-row" onclick="addDrugRow()">＋ 新增藥品項目</button>
+
+      <!-- Section 3 -->
+      <div class="section-label" style="margin-top:22px">③ 申請說明與附件</div>
+      <div class="grid2" style="margin-bottom:14px">
+        <div class="field">
+          <label class="label">附加檔案（Excel）</label>
+          <input type="file" class="inp" id="f-excel" accept=".xlsx,.xls" style="padding:6px">
+        </div>
+        <div class="field">
+          <label class="label">附加檔案（PDF）</label>
+          <input type="file" class="inp" id="f-pdf" accept=".pdf" style="padding:6px">
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:14px">
+        <label class="label">補充說明</label>
+        <textarea class="ta" id="f-reason" placeholder="如有其他需要補充說明的內容，請填寫於此…"></textarea>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label class="label">過去 1–3 個月平均週用量 <span class="req">*</span></label>
+          <input type="text" class="inp" id="f-weekly" placeholder="例：15 支 / 週">
+        </div>
+        <div class="field">
+          <label class="label">（新增品項）預估平均週用量</label>
+          <input type="text" class="inp" id="f-weekly-new" placeholder="新品項填寫">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supervisor auto-display -->
+  <div class="card" id="sup-card" style="display:none">
+    <div class="card-hd">
+      <div class="card-hd-title">👤 自動帶入簽核主管</div>
+      <span class="badge b-review" style="font-size:10px">系統自動查找</span>
+    </div>
+    <div class="card-body">
+      <div class="info-box" style="margin-bottom:16px">
+        ℹ️ 申請送出後，系統將自動寄送簽核通知信至以下主管信箱，請確認資訊正確。
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label class="label">二級主管（護長 / 醫師）</label>
+          <input type="text" class="inp" id="sup-2" readonly>
+        </div>
+        <div class="field">
+          <label class="label">一級主管</label>
+          <input type="text" class="inp" id="sup-1" readonly>
+        </div>
+        <div class="field">
+          <label class="label">二級主管 Email</label>
+          <input type="text" class="inp" id="sup-2-email" readonly>
+        </div>
+        <div class="field">
+          <label class="label">一級主管 Email</label>
+          <input type="text" class="inp" id="sup-1-email" readonly>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="btn-group" style="margin:0;padding:0;border:none">
+        <span style="font-size:12px;color:var(--hint);flex:1">送出後系統將自動通知各簽核主管，請確認所有欄位填寫完整。</span>
+        <button class="btn" onclick="saveDraft()">💾 儲存草稿</button>
+        <button class="btn btn-primary" onclick="submitForm()">🚀 送出申請</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== PAGE: LIST ======== -->
+<div id="page-list" style="display:none">
+  <div class="card">
+    <div class="card-hd">
+      <div class="card-hd-title">📂 申請紀錄列表</div>
+      <div style="display:flex;gap:8px">
+        <input type="text" class="inp" id="search-inp" placeholder="搜尋單位或申請編號…" style="width:200px;padding:6px 10px" oninput="renderList()">
+        <select class="inp sel" id="filter-status" style="width:120px;padding:6px 10px" onchange="renderList()">
+          <option value="">全部狀態</option>
+          <option value="pending">待簽核</option>
+          <option value="review">審核中</option>
+          <option value="done">已完成</option>
+          <option value="reject">已退回</option>
+        </select>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="list-tbl">
+        <thead>
+          <tr>
+            <th>申請編號</th>
+            <th>申請日期</th>
+            <th>申請人</th>
+            <th>申請單位</th>
+            <th>藥品數</th>
+            <th>申請原因</th>
+            <th>目前狀態</th>
+            <th>簽核進度</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="list-tbody"></tbody>
+      </table>
+      <div id="list-empty" class="empty" style="display:none">
+        <div class="empty-icon">📭</div>
+        <p>尚無申請紀錄</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== PAGE: SIGN ======== -->
+<div id="page-sign" style="display:none">
+  <div id="sign-select-msg" class="empty">
+    <div class="empty-icon">✍️</div>
+    <p>請從申請紀錄列表選擇要簽核的申請單</p>
+    <button class="btn" style="margin-top:12px" onclick="showPage('list')">前往申請紀錄</button>
+  </div>
+  <div id="sign-detail" style="display:none">
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-hd-title" id="sign-card-title">📄 申請單詳情</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="sign-card-badge" class="badge b-pending"></span>
+          <button class="btn btn-sm" onclick="showPage('list')">← 返回列表</button>
+        </div>
+      </div>
+      <div class="tabs" id="sign-tabs">
+        <button class="tab active" onclick="switchTab(this,'stab-info')">申請內容</button>
+        <button class="tab" onclick="switchTab(this,'stab-flow')">簽核流程</button>
+        <button class="tab" onclick="switchTab(this,'stab-pharma')">藥師評核</button>
+        <button class="tab" onclick="switchTab(this,'stab-mgmt')">藥品管理組</button>
+      </div>
+
+      <!-- Tab: info -->
+      <div id="stab-info" style="padding:22px">
+        <div id="sign-info-content"></div>
+      </div>
+
+      <!-- Tab: flow -->
+      <div id="stab-flow" style="display:none;padding:22px">
+        <div class="sign-flow" id="sign-flow-content"></div>
+      </div>
+
+      <!-- Tab: pharma -->
+      <div id="stab-pharma" style="display:none;padding:22px">
+        <div class="section-label">藥師評核意見</div>
+        <div class="field" style="margin-bottom:14px">
+          <label class="label">申請之常備藥理由是否合理？</label>
+          <div class="radio-group">
+            <label class="radio-item"><input type="radio" name="p1" value="yes" id="p1-yes"> 是</label>
+            <label class="radio-item"><input type="radio" name="p1" value="no" id="p1-no"> 否</label>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:14px">
+          <label class="label">申請之常備量與使用量相較是否適當？</label>
+          <div class="radio-group">
+            <label class="radio-item"><input type="radio" name="p2" value="yes" id="p2-yes"> 是</label>
+            <label class="radio-item"><input type="radio" name="p2" value="no" id="p2-no"> 否，建議量：<input type="text" class="inp" id="p-suggest" style="width:80px;display:inline;padding:4px 8px;margin-left:6px"></label>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:18px">
+          <label class="label">其他意見</label>
+          <textarea class="ta" id="p-comment" placeholder="請輸入評核意見…"></textarea>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openSignModal('pharma')">💊 藥師核章</button>
+      </div>
+
+      <!-- Tab: mgmt -->
+      <div id="stab-mgmt" style="display:none;padding:22px">
+        <div class="section-label">藥品管理組作業</div>
+        <div class="field" style="margin-bottom:14px;max-width:320px">
+          <label class="label">入帳單號 <span class="req">*</span></label>
+          <input type="text" class="inp" id="mgmt-voucher" placeholder="請輸入入帳單號">
+        </div>
+        <div class="field" style="margin-bottom:18px;max-width:320px">
+          <label class="label">更動後單位基本量表（PDF）</label>
+          <input type="file" class="inp" accept=".pdf" style="padding:6px">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openSignModal('mgmt')">🗂 藥品管理組核章</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== PAGE: DASHBOARD ======== -->
+<div id="page-dash" style="display:none">
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-lbl">本月申請總數</div><div class="stat-val" id="ds-total" style="color:var(--teal)">0</div><div class="stat-sub">件申請</div></div>
+    <div class="stat-card"><div class="stat-lbl">待簽核</div><div class="stat-val" id="ds-pending" style="color:var(--amber)">0</div><div class="stat-sub">需要處理</div></div>
+    <div class="stat-card"><div class="stat-lbl">已完成</div><div class="stat-val" id="ds-done" style="color:var(--green)">0</div><div class="stat-sub">件完成</div></div>
+    <div class="stat-card"><div class="stat-lbl">涉及藥品</div><div class="stat-val" id="ds-drugs" style="color:var(--blue)">0</div><div class="stat-sub">項次</div></div>
+  </div>
+  <div class="chart-grid">
+    <div class="card">
+      <div class="card-hd"><div class="card-hd-title">🏥 各單位申請次數</div></div>
+      <div class="card-body"><div class="chart-wrap"><canvas id="chartUnit"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-hd-title">💊 最常異動藥品 Top 10</div></div>
+      <div class="card-body"><div class="chart-wrap"><canvas id="chartDrug"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-hd-title">📈 申請類型分布</div></div>
+      <div class="card-body" style="display:flex;align-items:center;justify-content:center"><div style="height:200px;width:200px"><canvas id="chartType"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-hd-title">⏱ 月度申請趨勢</div></div>
+      <div class="card-body"><div class="chart-wrap"><canvas id="chartTrend"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== PAGE: CONFIG ======== -->
+<div id="page-cfg" style="display:none">
+  <div class="card">
+    <div class="card-hd"><div class="card-hd-title">⚙️ 系統設定</div></div>
+    <div class="card-body">
+      <div class="info-box" style="margin-bottom:20px">
+        ℹ️ 本系統透過 <strong>SharePoint REST API</strong> 直接存取 <code>常備藥 / 急救藥申請流程</code> 清單。簽核流程由 <strong>Power Automate</strong> 自動處理，無需額外設定。
+      </div>
+      <div class="section-label">SharePoint 連線資訊</div>
+      <div class="grid2" style="margin-bottom:20px">
+        <div class="field">
+          <label class="label">SharePoint 站台</label>
+          <input type="text" class="inp" value="ntuhgovtw.sharepoint.com/sites/-ylhphr" readonly style="font-size:12px;color:var(--muted)">
+        </div>
+        <div class="field">
+          <label class="label">目標清單</label>
+          <input type="text" class="inp" value="常備藥 / 急救藥申請流程" readonly style="font-size:12px;color:var(--muted)">
+        </div>
+      </div>
+      <div class="section-label">EmailJS 設定（選用）</div>
+      <div class="info-box" style="margin-bottom:16px">
+        ℹ️ Power Automate 已負責寄送 Outlook 簽核通知，EmailJS 僅供額外通知使用，可不設定。
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label class="label">EmailJS Public Key</label>
+          <input type="text" class="inp" id="cfg-pubkey" placeholder="選用">
+        </div>
+        <div class="field">
+          <label class="label">Service ID</label>
+          <input type="text" class="inp" id="cfg-svcid" placeholder="選用">
+        </div>
+        <div class="field">
+          <label class="label">Template ID</label>
+          <input type="text" class="inp" id="cfg-tplid" placeholder="選用">
+        </div>
+        <div class="field">
+          <label class="label">寄件人顯示名稱</label>
+          <input type="text" class="inp" id="cfg-sender" placeholder="藥品申請管理系統">
+        </div>
+      </div>
+      <div id="sup-editor"></div>
+      <div class="btn-group" style="margin-top:18px">
+        <button class="btn" onclick="testSpConnection()">🔗 測試 SharePoint 連線</button>
+        <button class="btn btn-primary" onclick="saveConfig()">💾 儲存設定</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- ===== CONTROLLED DRUG OVERLAY ===== -->
+<div id="controlled-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:150;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px">
+  <div style="background:var(--bg);border-radius:var(--r-lg);width:100%;max-width:760px;margin:auto;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.3)">
+    <!-- Header -->
+    <div style="background:var(--coral);padding:16px 22px;display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:10px;color:#fff">
+        <span style="font-size:20px">🔐</span>
+        <div>
+          <div style="font-size:15px;font-weight:600">管制藥品申請單</div>
+          <div style="font-size:11px;opacity:.85">本表單專用於管制藥品申請，請獨立填寫</div>
+        </div>
+      </div>
+      <button onclick="closeControlledForm()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px">✕ 關閉</button>
+    </div>
+    <!-- Body -->
+    <div style="padding:24px">
+      <div style="background:var(--coral-light);border:0.5px solid rgba(143,50,24,.2);border-radius:var(--r-sm);padding:10px 14px;font-size:12px;color:var(--coral);margin-bottom:20px">
+        ⚠️ 本表單僅供<strong>管制藥品</strong>申請使用。藥品明細欄位請填寫管制藥品名稱及規格。
+      </div>
+
+      <div class="section-label">① 申請基本資料</div>
+      <div class="grid2" style="margin-bottom:16px">
+        <div class="field">
+          <label class="label">申請日期 <span class="req">*</span></label>
+          <input type="date" class="inp" id="cf-date">
+        </div>
+        <div class="field">
+          <label class="label">院區 <span class="req">*</span></label>
+          <select class="sel inp" id="cf-campus">
+            <option value="">請選擇院區</option>
+            <option value="douliou">斗六院區</option>
+            <option value="huwei">虎尾院區</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="label">申請人姓名 <span class="req">*</span></label>
+          <input type="text" class="inp" id="cf-applicant" placeholder="請輸入申請人姓名">
+        </div>
+        <div class="field">
+          <label class="label">分機號碼 <span class="req">*</span></label>
+          <input type="text" class="inp" id="cf-ext" placeholder="例：12345">
+        </div>
+        <div class="field full">
+          <label class="label">申請單位 <span class="req">*</span></label>
+          <div class="unit-search-wrap" id="cf-unit-wrap">
+            <input type="text" class="inp" id="cf-unit-input" placeholder="輸入關鍵字搜尋單位…" autocomplete="off"
+              oninput="filterUnits('cf')" onfocus="showUnitDropdown('cf')" onblur="hideUnitDropdown('cf')">
+            <input type="hidden" id="cf-unit">
+            <div class="unit-dropdown" id="cf-unit-dropdown" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:16px">
+        <label class="label">申請項目</label>
+        <div style="display:inline-flex;align-items:center;gap:8px;padding:7px 14px;background:var(--coral-light);border-radius:var(--r-sm);font-size:13px;color:var(--coral);font-weight:500">
+          🔐 管制藥品（獨立申請）
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:16px">
+        <label class="label">異動項目 <span class="req">*</span></label>
+        <div class="radio-group">
+          <label class="radio-item"><input type="radio" name="cf-chg" value="qty" checked> 修改基本量</label>
+          <label class="radio-item"><input type="radio" name="cf-chg" value="add"> 新增於書記入帳畫面</label>
+          <label class="radio-item"><input type="radio" name="cf-chg" value="remove"> 自書記入帳畫面取消</label>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:20px">
+        <label class="label">申請原因 <span class="req">*</span></label>
+        <div class="radio-group">
+          <label class="radio-item"><input type="radio" name="cf-reason" value="increase"> 📈 使用量增加（＋）</label>
+          <label class="radio-item"><input type="radio" name="cf-reason" value="decrease"> 📉 使用量減少（－）</label>
+          <label class="radio-item"><input type="radio" name="cf-reason" value="business"> 🏥 業務需求增加</label>
+          <label class="radio-item"><input type="radio" name="cf-reason" value="other"> 其他</label>
+        </div>
+      </div>
+
+      <div class="section-label">② 管制藥品明細</div>
+      <table class="dtbl">
+        <thead>
+          <tr>
+            <th style="width:44px">#</th>
+            <th>管制藥品名稱（含規格）</th>
+            <th style="width:110px">變更前基本量</th>
+            <th style="width:110px">變更後基本量</th>
+            <th style="width:48px"></th>
+          </tr>
+        </thead>
+        <tbody id="cf-drug-tbody">
+          <tr>
+            <td style="text-align:center;color:var(--hint);font-size:12px">1</td>
+            <td><input type="text" placeholder="請輸入管制藥品名稱及規格" data-field="name" class="cf-name-inp"></td>
+            <td><input type="text" placeholder="變更前" data-field="before" style="text-align:center"></td>
+            <td><input type="text" placeholder="變更後" data-field="after" style="text-align:center"></td>
+            <td style="text-align:center"><button class="del-btn" onclick="delCRow(this)">✕</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <button class="add-row" onclick="addCRow()" style="margin-bottom:20px">＋ 新增管制藥品項目</button>
+
+      <div class="section-label">③ 申請說明與附件</div>
+      <div class="grid2" style="margin-bottom:14px">
+        <div class="field">
+          <label class="label">附加檔案（Excel）</label>
+          <input type="file" class="inp" accept=".xlsx,.xls" style="padding:6px">
+        </div>
+        <div class="field">
+          <label class="label">附加檔案（PDF）</label>
+          <input type="file" class="inp" accept=".pdf" style="padding:6px">
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label class="label">補充說明</label>
+        <textarea class="ta" id="cf-reason-text" placeholder="如有其他需要補充說明的內容，請填寫於此…"></textarea>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label class="label">過去 1–3 個月平均週用量 <span class="req">*</span></label>
+          <input type="text" class="inp" id="cf-weekly" placeholder="例：15 支 / 週">
+        </div>
+        <div class="field">
+          <label class="label">（新增品項）預估平均週用量</label>
+          <input type="text" class="inp" id="cf-weekly-new2" placeholder="新品項填寫">
+        </div>
+      </div>
+
+      <!-- Submit row -->
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:20px;border-top:0.5px solid var(--border);margin-top:20px">
+        <span style="font-size:12px;color:var(--hint)">送出後系統將自動通知各簽核主管</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="closeControlledForm()">取消</button>
+          <button class="btn btn-primary" onclick="submitControlled()" style="background:var(--coral);border-color:var(--coral)">🔐 送出管制藥品申請</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SIGN MODAL ===== -->
+<div class="modal-bg" id="sign-modal" style="display:none">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="sm-title">電子簽核</div>
+    <div class="modal-sub" id="sm-sub">請在下方空白處進行手寫簽名</div>
+    <div class="sig-canvas-wrap" style="margin-bottom:8px">
+      <canvas id="sigCanvas" width="348" height="130"></canvas>
+      <div class="sig-hint" id="sig-hint">請用滑鼠或觸控板在此簽名</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <button onclick="clearSig()" style="font-size:11px;padding:3px 10px;border:0.5px solid var(--border);border-radius:4px;background:none;cursor:pointer;color:var(--muted)">清除重簽</button>
+      <span style="font-size:11px;color:var(--hint)">簽名將永久留存於申請紀錄</span>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn" onclick="closeSignModal()">取消</button>
+      <button class="btn btn-primary" onclick="confirmSign()">確認核章 ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================
+// 單位清單（從 SharePoint 抓）
+// =============================
+const SP_UNIT_LIST = '單位主管對照表_含單位中文';
+let unitOptions = []; // [{ label:'藥劑部', campus:'PHR' }, ...]
+
+async function loadUnitOptions() {
+  try {
+    const url = `${SP_SITE}/_api/web/lists/getbytitle('${encodeURIComponent(SP_UNIT_LIST)}')/items?$select=單位中文,院區代碼&$orderby=單位中文&$top=500`;
+    const r = await fetch(url, {
+      headers: { 'Accept': 'application/json;odata=verbose' },
+      credentials: 'include'
+    });
+    if (!r.ok) throw new Error('讀取單位清單失敗');
+    const d = await r.json();
+    unitOptions = (d.d?.results || [])
+      .filter(i => i.單位中文)
+      .map(i => ({ label: i.單位中文, campus: i.院區代碼 || '' }));
+    // 同時更新兩個表單的下拉
+    renderUnitDropdown('f', '');
+    renderUnitDropdown('cf', '');
+  } catch(e) {
+    console.warn('單位清單讀取失敗，使用空清單', e);
+    unitOptions = [];
+  }
+}
+
+// 渲染下拉選項（prefix = 'f' 或 'cf'）
+function renderUnitDropdown(prefix, keyword) {
+  const dropdown = document.getElementById(`${prefix}-unit-dropdown`);
+  if (!dropdown) return;
+  const kw = keyword.trim().toLowerCase();
+  const filtered = kw
+    ? unitOptions.filter(u => u.label.toLowerCase().includes(kw))
+    : unitOptions;
+
+  if (filtered.length === 0) {
+    dropdown.innerHTML = `<div class="unit-no-result">找不到符合的單位</div>`;
+    return;
+  }
+  dropdown.innerHTML = filtered.map(u => {
+    const highlighted = kw
+      ? u.label.replace(new RegExp(`(${kw})`, 'gi'), '<mark>$1</mark>')
+      : u.label;
+    const campusTag = u.campus ? `<span style="font-size:10px;color:var(--hint);margin-left:6px">${u.campus==='PHR'?'斗六':'虎尾'}</span>` : '';
+    return `<div class="unit-option" onmousedown="selectUnit('${prefix}','${u.label.replace(/'/g,"\\'")}','${u.campus}')">${highlighted}${campusTag}</div>`;
+  }).join('');
+}
+
+function filterUnits(prefix) {
+  const kw = document.getElementById(`${prefix}-unit-input`).value;
+  renderUnitDropdown(prefix, kw);
+  showUnitDropdown(prefix);
+  // 清除已選值（使用者正在重新輸入）
+  document.getElementById(`${prefix}-unit`).value = '';
+}
+
+function showUnitDropdown(prefix) {
+  const dropdown = document.getElementById(`${prefix}-unit-dropdown`);
+  const kw = document.getElementById(`${prefix}-unit-input`).value;
+  renderUnitDropdown(prefix, kw);
+  if (dropdown) dropdown.style.display = 'block';
+}
+
+function hideUnitDropdown(prefix) {
+  // 延遲隱藏，讓 onmousedown 先觸發
+  setTimeout(() => {
+    const dropdown = document.getElementById(`${prefix}-unit-dropdown`);
+    if (dropdown) dropdown.style.display = 'none';
+    // 如果輸入框的值不在清單裡，清空 hidden input
+    const inputVal = document.getElementById(`${prefix}-unit-input`).value.trim();
+    const matched = unitOptions.find(u => u.label === inputVal);
+    if (!matched) {
+      document.getElementById(`${prefix}-unit`).value = '';
+    }
+  }, 200);
+}
+
+function selectUnit(prefix, label, campus) {
+  document.getElementById(`${prefix}-unit-input`).value = label;
+  document.getElementById(`${prefix}-unit`).value = label;
+  const dropdown = document.getElementById(`${prefix}-unit-dropdown`);
+  if (dropdown) dropdown.style.display = 'none';
+  // 如果是主表單，自動帶院區
+  if (prefix === 'f') {
+    const campusMap = { PHR:'douliou', HPHR:'huwei' };
+    if (campus && campusMap[campus]) {
+      document.getElementById('f-campus').value = campusMap[campus];
+    }
+    onUnitChange();
+  } else if (prefix === 'cf') {
+    const campusMap = { PHR:'douliou', HPHR:'huwei' };
+    if (campus && campusMap[campus]) {
+      document.getElementById('cf-campus').value = campusMap[campus];
+    }
+  }
+}
+
+// =============================
+// SHAREPOINT 設定
+// =============================
+const SP_SITE = 'https://ntuhgovtw.sharepoint.com/sites/-ylhphr';
+const SP_LIST = '常備藥 / 急救藥申請流程';
+const SP_API  = `${SP_SITE}/_api/web/lists/getbytitle('${encodeURIComponent(SP_LIST)}')/items`;
+
+// 取得 Request Digest（POST 需要）
+async function getDigest() {
+  const r = await fetch(`${SP_SITE}/_api/contextinfo`, {
+    method: 'POST',
+    headers: { 'Accept': 'application/json;odata=verbose' },
+    credentials: 'include'
+  });
+  const d = await r.json();
+  return d.d.GetContextWebInformation.FormDigestValue;
+}
+
+// =============================
+// SHAREPOINT CRUD
+// =============================
+
+// 讀取所有申請（從 SharePoint）
+async function loadReqs() {
+  try {
+    showLoading(true);
+    const r = await fetch(
+      `${SP_API}?$orderby=Created desc&$top=200&$select=Id,Title,申請日期,申請院區,申請單位,申請項目,異動項目,申請原因,平均週用量,新增品項之預估用量,藥品明細,申請分機,目前狀態,申請人/Title,申請人/EMail&$expand=申請人`,
+      { headers: { 'Accept': 'application/json;odata=verbose' }, credentials: 'include' }
+    );
+    const d = await r.json();
+    showLoading(false);
+    return (d.d?.results || []).map(spItemToReq);
+  } catch(e) {
+    showLoading(false);
+    console.error('讀取失敗', e);
+    return [];
+  }
+}
+
+// 將 SharePoint 欄位轉換成原本的 req 格式
+function spItemToReq(item) {
+  let drugs = [];
+  try { drugs = JSON.parse(item.藥品明細 || '[]'); } catch(e) { drugs = []; }
+  let signs = [];
+  try { signs = JSON.parse(item.__signs || '[]'); } catch(e) { signs = []; }
+
+  const campusMap = { 'PHR':'斗六院區', 'HPHR':'虎尾院區' };
+  const campus = item.申請院區 || '';
+  return {
+    _spId: item.Id,
+    id: item.Title || ('RX-' + item.Id),
+    date: item.申請日期 ? item.申請日期.substring(0,10) : '',
+    campus: campus,
+    campusLabel: campusMap[campus] || campus,
+    applicant: item['申請人']?.Title || '',
+    applicantEmail: item['申請人']?.EMail || '',
+    ext: item.申請分機 || '',
+    unitLabel: item.申請單位 || '',
+    unit: item.申請單位 || '',
+    types: item.申請項目 ? [item.申請項目] : [],
+    changeType: item.異動項目 || '',
+    reasonType: item.申請原因 || '',
+    weekly: item.平均週用量 || '',
+    weeklyNew: item.新增品項之預估用量 || '',
+    drugs: drugs,
+    reason: '',
+    status: spStatusToLocal(item.目前狀態),
+    signs: signs,
+    pharmaComment: '',
+    pharmaVoucher: '',
+  };
+}
+
+function spStatusToLocal(s) {
+  if (!s) return 'pending';
+  if (s === '已核准' || s === '完成') return 'done';
+  if (s === '已退回' || s === '退回') return 'reject';
+  if (s === '審核中') return 'review';
+  return 'pending';
+}
+
+// 新增申請到 SharePoint
+async function saveNewReq(req) {
+  try {
+    const digest = await getDigest();
+    const payload = {
+      '__metadata': { 'type': `SP.Data.${encodeURIComponent(SP_LIST).replace(/%20/g,'_x0020_').replace(/%2F/g,'_x002F_')}ListItem` },
+      'Title': req.id,
+      '申請日期': req.date,
+      '申請院區': req.campus,
+      '申請單位': req.unitLabel,
+      '申請項目': req.types.join(''),
+      '異動項目': req.changeType,
+      '申請原因': req.reasonType,
+      '平均週用量': parseFloat(req.weekly) || 0,
+      '新增品項之預估用量': parseFloat(req.weeklyNew) || 0,
+      '藥品明細': JSON.stringify(req.drugs),
+      '申請分機': req.ext,
+      '目前狀態': '待審核',
+    };
+    const r = await fetch(SP_API, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json;odata=verbose',
+        'Content-Type': 'application/json;odata=verbose',
+        'X-RequestDigest': digest
+      },
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) {
+      const err = await r.json();
+      console.error('儲存失敗', err);
+      return false;
+    }
+    return true;
+  } catch(e) {
+    console.error('儲存例外', e);
+    return false;
+  }
+}
+
+// 更新 SharePoint 項目（簽核狀態）
+async function updateReqStatus(spId, signs, status) {
+  try {
+    const digest = await getDigest();
+    const spStatus = { pending:'待審核', review:'審核中', done:'已核准', reject:'已退回' }[status] || '待審核';
+    const payload = {
+      '__metadata': { 'type': `SP.Data.${encodeURIComponent(SP_LIST).replace(/%20/g,'_x0020_').replace(/%2F/g,'_x002F_')}ListItem` },
+      '目前狀態': spStatus,
+    };
+    await fetch(`${SP_API}(${spId})`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json;odata=verbose',
+        'Content-Type': 'application/json;odata=verbose',
+        'X-RequestDigest': digest,
+        'IF-MATCH': '*',
+        'X-HTTP-Method': 'MERGE'
+      },
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch(e) {
+    console.error('更新失敗', e);
+    return false;
+  }
+}
+
+// =============================
+// 設定（仍用 localStorage，只是 EmailJS 設定）
+// =============================
+const CFG_KEY = 'pharma_cfg_v2';
+function loadCfg() {
+  const def = {
+    pubkey:'', svcid:'', tplid:'', sender:'藥品申請管理系統',
+    units: {}
+  };
+  try {
+    const saved = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
+    return Object.assign({}, def, saved);
+  } catch(e) { return def; }
+}
+function saveCfg(obj) { localStorage.setItem(CFG_KEY, JSON.stringify(obj)); }
+
+// =============================
+// Loading 狀態
+// =============================
+function showLoading(show) {
+  let el = document.getElementById('sp-loading');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'sp-loading';
+    el.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--teal-dark);color:#fff;padding:8px 20px;border-radius:20px;font-size:13px;z-index:500;display:none;box-shadow:0 4px 12px rgba(0,0,0,.2)';
+    el.textContent = '⏳ 與 SharePoint 同步中…';
+    document.body.appendChild(el);
+  }
+  el.style.display = show ? 'block' : 'none';
+}
+
+let cfg = loadCfg();
+let reqs = [];  // 改為從 SharePoint 動態載入
+let currentReqId = null;
+let currentSignRole = null;
+let sigCtx = null, sigDrawing = false, sigHasContent = false;
+
+// =============================
+// UNIT LABELS
+// =============================
+const unitLabel = {
+  icu:'加護病房 (ICU)', er:'急診室 (ER)', ward5a:'內科 5A 病房',
+  ward6b:'外科 6B 病房', or:'手術室 (OR)', ccu:'心臟加護 (CCU)',
+  picu:'兒科加護 (PICU)', nicu:'新生兒加護 (NICU)'
+};
+
+// =============================
+// NAVIGATION
+// =============================
+async function showPage(p) {
+  ['form','list','sign','dash','cfg'].forEach(id => {
+    const el = document.getElementById('page-'+id);
+    if (el) el.style.display = id === p ? 'block' : 'none';
+    const nb = document.getElementById('nav-'+id);
+    if (nb) nb.classList.toggle('active', id === p);
+  });
+  if (p === 'list') { reqs = await loadReqs(); renderList(); }
+  if (p === 'dash') { reqs = await loadReqs(); renderDash(); }
+  if (p === 'cfg')  renderCfgEditor();
+  updateBadges();
+}
+
+function switchTab(btn, tabId) {
+  const tabs = ['stab-info','stab-flow','stab-pharma','stab-mgmt'];
+  tabs.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = id === tabId ? 'block' : 'none';
+  });
+  btn.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function updateBadges() {
+  reqs = await loadReqs();
+  const sign = reqs.filter(r => r.status === 'pending').length;
+  document.getElementById('cnt-list').textContent = reqs.length;
+  document.getElementById('cnt-sign').textContent = sign;
+}
+
+// =============================
+// FORM INIT
+// =============================
+function initForm() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('f-date').value = today;
+  document.getElementById('f-applicant').value = '';
+  document.getElementById('f-ext').value = '';
+  document.getElementById('f-unit').value = '';
+  const unitInput = document.getElementById('f-unit-input');
+  if (unitInput) unitInput.value = '';
+  document.getElementById('f-campus').value = '';
+  document.getElementById('f-reason').value = '';
+  document.getElementById('f-weekly').value = '';
+  document.getElementById('f-weekly-new').value = '';
+  document.getElementById('t-regular').checked = true;
+  document.getElementById('controlled-alert').style.display = 'none';
+  document.getElementById('sup-card').style.display = 'none';
+  document.getElementById('reason-hint').style.display = 'none';
+  document.querySelector('input[name=chg][value=qty]').checked = true;
+  document.querySelectorAll('input[name=reason-type]').forEach(r => r.checked = false);
+  document.getElementById('drug-tbody').innerHTML = '';
+  addDrugRow();
+}
+
+function onUnitChange() {
+  // 主管資訊由 Power Automate 自動從「單位主管對照表」查找，不需在前端設定
+  const unit = document.getElementById('f-unit').value;
+  const card = document.getElementById('sup-card');
+  if (unit) {
+    document.getElementById('sup-2').value = '（由系統自動查找）';
+    document.getElementById('sup-1').value = '（由系統自動查找）';
+    document.getElementById('sup-2-email').value = '系統將自動寄送簽核通知';
+    document.getElementById('sup-1-email').value = '系統將自動寄送簽核通知';
+    card.style.display = 'block';
+  } else {
+    card.style.display = 'none';
+  }
+}
+
+// Drug type radio — show alert when controlled is selected
+function onControlledCheck(radio) {
+  if (radio.value === 'controlled' && radio.checked) {
+    document.getElementById('controlled-alert').style.display = 'block';
+  }
+}
+
+function cancelControlled() {
+  // Switch back to 常備藥
+  document.getElementById('t-regular').checked = true;
+  document.getElementById('controlled-alert').style.display = 'none';
+}
+
+function openControlledForm() {
+  // Reset controlled form
+  document.getElementById('cf-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('cf-applicant').value = '';
+  document.getElementById('cf-ext').value = '';
+  document.getElementById('cf-campus').value = '';
+  document.getElementById('cf-unit').value = '';
+  document.getElementById('cf-weekly').value = '';
+  document.getElementById('cf-reason-text').value = '';
+  document.querySelectorAll('input[name=cf-chg]')[0].checked = true;
+  document.querySelectorAll('input[name=cf-reason]').forEach(r => r.checked = false);
+  // Reset drug rows
+  cfRowCount = 1;
+  const tbody = document.getElementById('cf-drug-tbody');
+  tbody.innerHTML = `<tr>
+    <td style="text-align:center;color:var(--hint);font-size:12px">1</td>
+    <td><input type="text" placeholder="請輸入管制藥品名稱及規格" data-field="name" class="cf-name-inp"></td>
+    <td><input type="text" placeholder="變更前" data-field="before" style="text-align:center"></td>
+    <td><input type="text" placeholder="變更後" data-field="after" style="text-align:center"></td>
+    <td style="text-align:center"><button class="del-btn" onclick="delCRow(this)">✕</button></td>
+  </tr>`;
+  // Show overlay
+  document.getElementById('controlled-overlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  // Reset radio on main form
+  document.getElementById('t-regular').checked = true;
+  document.getElementById('controlled-alert').style.display = 'none';
+}
+function closeControlledForm() {
+  document.getElementById('controlled-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+let cfRowCount = 1;
+function addCRow() {
+  cfRowCount++;
+  const tbody = document.getElementById('cf-drug-tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td style="text-align:center;color:var(--hint);font-size:12px">${cfRowCount}</td>
+    <td><input type="text" placeholder="請輸入管制藥品名稱及規格" data-field="name" class="cf-name-inp"></td>
+    <td><input type="text" placeholder="變更前" data-field="before" style="text-align:center"></td>
+    <td><input type="text" placeholder="變更後" data-field="after" style="text-align:center"></td>
+    <td style="text-align:center"><button class="del-btn" onclick="delCRow(this)">✕</button></td>`;
+  tbody.appendChild(tr);
+}
+function delCRow(btn) {
+  if (document.querySelectorAll('#cf-drug-tbody tr').length > 1) btn.closest('tr').remove();
+}
+async function submitControlled() {
+  const campus = document.getElementById('cf-campus').value;
+  const applicant = document.getElementById('cf-applicant').value.trim();
+  const ext = document.getElementById('cf-ext').value.trim();
+  const unit = document.getElementById('cf-unit').value;  // hidden input
+  const reason = document.querySelector('input[name=cf-reason]:checked');
+  const weekly = document.getElementById('cf-weekly').value.trim();
+  if (!campus)    { toast('請選擇院區', 'warn'); return; }
+  if (!applicant) { toast('請填寫申請人姓名', 'warn'); return; }
+  if (!ext)       { toast('請填寫分機號碼', 'warn'); return; }
+  if (!unit)      { toast('請選擇申請單位', 'warn'); return; }
+  if (!reason)    { toast('請選擇申請原因', 'warn'); return; }
+  if (!weekly)    { toast('請填寫平均週用量', 'warn'); return; }
+  const drugs = [];
+  document.querySelectorAll('#cf-drug-tbody tr').forEach(tr => {
+    const name = tr.querySelector('[data-field=name]')?.value.trim();
+    if (name) drugs.push(name);
+  });
+  if (drugs.length === 0) { toast('請至少填寫一項管制藥品', 'warn'); return; }
+
+  const reasonLabels = { increase:'使用量增加（＋）', decrease:'使用量減少（－）', business:'業務需求增加', other:'其他' };
+  const chgLabels = { qty:'修改基本量', add:'新增於書記入帳畫面', remove:'自書記入帳畫面取消' };
+  const campusLabels = { douliou:'PHR', huwei:'HPHR' };
+  const chgVal = document.querySelector('input[name=cf-chg]:checked').value;
+  const id = 'CTL-' + new Date().getFullYear() + '-' + String(Date.now()).slice(-5);
+  const req = {
+    id,
+    unit, unitLabel: unit,
+    campus: campusLabels[campus] || campus,
+    campusLabel: campus === 'douliou' ? '斗六院區' : '虎尾院區',
+    applicant, ext,
+    date: document.getElementById('cf-date').value,
+    types: ['🔐 管制藥品'],
+    changeType: chgLabels[chgVal],
+    reasonType: reasonLabels[reason.value],
+    drugs: drugs.map(n => ({ name: n, before:'', after:'' })),
+    reason: document.getElementById('cf-reason-text').value.trim(),
+    weekly, weeklyNew: '',
+    status: 'pending',
+  };
+
+  const ok = await saveNewReq(req);
+  if (ok) {
+    toast('✅ 管制藥品申請已送出！');
+    closeControlledForm();
+    setTimeout(() => showPage('list'), 1200);
+  } else {
+    toast('❌ 送出失敗，請確認已登入 SharePoint。', 'warn');
+  }
+}
+
+// Reason type radio change
+const reasonHints = {
+  increase: '📈 使用量增加：請於補充說明欄填寫近期使用趨勢及增加原因。',
+  decrease: '📉 使用量減少：請於補充說明欄說明使用量下降原因，並確認新基本量合理。',
+  business: '🏥 業務需求增加：請於補充說明欄說明業務內容異動或新增醫療服務項目。',
+  other: '請於補充說明欄詳述申請原因。'
+};
+function onReasonTypeChange() {
+  const val = document.querySelector('input[name=reason-type]:checked')?.value;
+  const hint = document.getElementById('reason-hint');
+  if (val && reasonHints[val]) {
+    hint.textContent = reasonHints[val];
+    hint.style.display = 'block';
+  } else {
+    hint.style.display = 'none';
+  }
+}
+
+
+let drugRowCount = 0;
+function addDrugRow() {
+  drugRowCount++;
+  const tbody = document.getElementById('drug-tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td style="text-align:center;color:var(--hint);font-size:12px">${drugRowCount}</td>
+    <td><input type="text" placeholder="請輸入藥品名稱及規格" data-field="name"></td>
+    <td><input type="text" placeholder="變更前" data-field="before" style="text-align:center"></td>
+    <td><input type="text" placeholder="變更後" data-field="after" style="text-align:center"></td>
+    <td style="text-align:center"><button class="del-btn" onclick="delDrugRow(this)">✕</button></td>`;
+  tbody.appendChild(tr);
+}
+function delDrugRow(btn) {
+  if (document.querySelectorAll('#drug-tbody tr').length > 1) btn.closest('tr').remove();
+}
+
+// =============================
+// FORM SUBMIT → SharePoint
+// =============================
+async function submitForm() {
+  const unit = document.getElementById('f-unit').value;  // hidden input，已選單位中文名
+  const campus = document.getElementById('f-campus').value;
+  const applicant = document.getElementById('f-applicant').value.trim();
+  const ext = document.getElementById('f-ext').value.trim();
+  const weekly = document.getElementById('f-weekly').value.trim();
+  const weeklyNew = document.getElementById('f-weekly-new').value.trim();
+  const reasonType = document.querySelector('input[name=reason-type]:checked');
+
+  if (!campus) { toast('請選擇院區', 'warn'); return; }
+  if (!applicant) { toast('請填寫申請人姓名', 'warn'); return; }
+  if (!ext) { toast('請填寫分機號碼', 'warn'); return; }
+  if (!unit) { toast('請選擇申請單位', 'warn'); return; }
+  if (!reasonType) { toast('請選擇申請原因', 'warn'); return; }
+  if (!weekly) { toast('請填寫平均週用量', 'warn'); return; }
+
+  const drugs = [];
+  document.querySelectorAll('#drug-tbody tr').forEach(tr => {
+    const name = tr.querySelector('[data-field=name]').value.trim();
+    const before = tr.querySelector('[data-field=before]').value.trim();
+    const after = tr.querySelector('[data-field=after]').value.trim();
+    if (name) drugs.push({ name, before, after });
+  });
+  if (drugs.length === 0) { toast('請至少填寫一項藥品', 'warn'); return; }
+
+  const drugTypeVal = document.querySelector('input[name=drug-type]:checked')?.value;
+  const drugTypeLabels = { regular:'常備藥', emergency:'急救藥', free:'不計價藥品' };
+  const types = drugTypeVal && drugTypeLabels[drugTypeVal] ? [drugTypeLabels[drugTypeVal]] : [];
+  if (types.length === 0) { toast('請選擇申請項目', 'warn'); return; }
+
+  const chgType = document.querySelector('input[name=chg]:checked').value;
+  const chgLabels = { qty:'修改基本量', add:'新增於書記入帳畫面', remove:'自書記入帳畫面取消' };
+  const reasonLabels = { increase:'使用量增加（＋）', decrease:'使用量減少（－）', business:'業務需求增加', other:'其他' };
+  const campusLabels = { douliou:'PHR', huwei:'HPHR' };
+
+  const id = 'RX-' + new Date().getFullYear() + '-' + String(Date.now()).slice(-5);
+  const req = {
+    id,
+    unit, unitLabel: unit,
+    campus: campusLabels[campus] || campus,
+    campusLabel: campus === 'douliou' ? '斗六院區' : '虎尾院區',
+    applicant, ext,
+    date: document.getElementById('f-date').value,
+    types,
+    changeType: chgLabels[chgType],
+    reasonType: reasonLabels[reasonType.value],
+    drugs,
+    reason: document.getElementById('f-reason').value.trim(),
+    weekly, weeklyNew,
+    status: 'pending',
+  };
+
+  const btn = document.querySelector('.btn-primary[onclick="submitForm()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 送出中…'; }
+
+  const ok = await saveNewReq(req);
+
+  if (btn) { btn.disabled = false; btn.textContent = '🚀 送出申請'; }
+
+  if (ok) {
+    toast('✅ 申請已送出！Power Automate 將自動通知各簽核主管。');
+    initForm();
+    setTimeout(() => showPage('list'), 1600);
+  } else {
+    toast('❌ 送出失敗，請確認您已登入 SharePoint 並重試。', 'warn');
+  }
+}
+
+function saveDraft() {
+  toast('草稿功能：請直接送出申請，資料將儲存至 SharePoint。');
+}
+
+// =============================
+// EMAIL
+// =============================
+function sendNotificationEmail(req, signStep) {
+  if (!cfg.pubkey || !cfg.svcid || !cfg.tplid) {
+    console.warn('EmailJS 未設定，跳過寄信');
+    return;
+  }
+  try {
+    emailjs.init({ publicKey: cfg.pubkey });
+  } catch(e) {}
+
+  const next = req.signs.find(s => !s.done);
+  if (!next) return;
+
+  // Find email for next signer
+  let toEmail = '';
+  if (next.role === '二級主管') toEmail = req.sup2_email;
+  else if (next.role === '一級主管') toEmail = req.sup1_email;
+  else toEmail = ''; // can add pharmacist emails
+
+  if (!toEmail) return;
+
+  const drugsText = req.drugs.map((d,i) => `${i+1}. ${d.name}（${d.before}→${d.after}）`).join('\n');
+  const signLink = window.location.href + '#sign=' + req.id;
+
+  emailjs.send(cfg.svcid, cfg.tplid, {
+    to_email: toEmail,
+    to_name: next.name,
+    req_id: req.id,
+    unit: req.unitLabel,
+    date: req.date,
+    drugs: drugsText,
+    reason: req.reason,
+    role: next.role,
+    sign_link: signLink,
+    sender: cfg.sender || '藥品申請管理系統'
+  }).then(() => console.log('Email sent to', toEmail))
+    .catch(e => console.error('Email error:', e));
+}
+
+// =============================
+// LIST PAGE
+// =============================
+const STATUS_LABEL = { pending:'待簽核', review:'審核中', done:'已完成', reject:'已退回' };
+const STATUS_BADGE = { pending:'b-pending', review:'b-review', done:'b-done', reject:'b-reject' };
+
+function renderList() {
+  const q = (document.getElementById('search-inp')?.value || '').toLowerCase();
+  const st = document.getElementById('filter-status')?.value || '';
+  let filtered = reqs.filter(r => {
+    const matchQ = !q || (r.id||'').toLowerCase().includes(q) || (r.unitLabel||'').toLowerCase().includes(q) || (r.applicant||'').toLowerCase().includes(q);
+    const matchSt = !st || r.status === st;
+    return matchQ && matchSt;
+  });
+  const tbody = document.getElementById('list-tbody');
+  const empty = document.getElementById('list-empty');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = filtered.map(r => {
+    // 簽核進度用目前狀態顯示
+    const progressHtml = `<span class="badge ${STATUS_BADGE[r.status]}">${STATUS_LABEL[r.status]}</span>`;
+    return `<tr>
+      <td><button class="link-btn" onclick="openReq('${r.id}')">${r.id}</button></td>
+      <td>${r.date}</td>
+      <td>${r.applicant||'—'}<br><span style="font-size:11px;color:var(--hint)">分機 ${r.ext||'—'}</span></td>
+      <td>${r.unitLabel||'—'}</td>
+      <td>${(r.drugs||[]).length} 項</td>
+      <td style="font-size:12px;color:var(--teal)">${r.reasonType||'—'}</td>
+      <td><span class="badge ${STATUS_BADGE[r.status]}">${STATUS_LABEL[r.status]}</span></td>
+      <td>${progressHtml}</td>
+      <td><button class="btn btn-sm" onclick="openReq('${r.id}')">查看</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function openReq(id) {
+  currentReqId = id;
+  const req = reqs.find(r => r.id === id);
+  if (!req) return;
+
+  // Reset tabs
+  document.querySelectorAll('#sign-tabs .tab').forEach((t,i) => t.classList.toggle('active', i===0));
+  ['stab-info','stab-flow','stab-pharma','stab-mgmt'].forEach((id,i) => {
+    document.getElementById(id).style.display = i===0 ? 'block' : 'none';
+  });
+
+  // Badge
+  document.getElementById('sign-card-title').textContent = `📄 申請單 ${req.id}`;
+  document.getElementById('sign-card-badge').className = `badge ${STATUS_BADGE[req.status]}`;
+  document.getElementById('sign-card-badge').textContent = STATUS_LABEL[req.status];
+
+  // Info tab
+  const drugsHtml = (req.drugs||[]).map((d,i) =>
+    `<tr><td>${i+1}</td><td>${d.name}</td><td style="text-align:center">${d.before||'—'}</td><td style="text-align:center">${d.after||'—'}</td></tr>`
+  ).join('');
+  document.getElementById('sign-info-content').innerHTML = `
+    <div class="grid3" style="margin-bottom:18px">
+      <div><div class="label">申請單位</div><p style="font-size:13px;font-weight:600;margin-top:4px">${req.unitLabel}</p></div>
+      <div><div class="label">院區</div><p style="font-size:13px;margin-top:4px">${req.campusLabel||req.campus}</p></div>
+      <div><div class="label">申請日期</div><p style="font-size:13px;margin-top:4px">${req.date}</p></div>
+      <div><div class="label">申請人</div><p style="font-size:13px;font-weight:500;margin-top:4px">${req.applicant||'—'}</p></div>
+      <div><div class="label">分機號碼</div><p style="font-size:13px;margin-top:4px">${req.ext||'—'}</p></div>
+      <div><div class="label">申請類型</div><p style="margin-top:4px">${(req.types||[]).map(t=>`<span class="badge b-review">${t}</span>`).join(' ')}</p></div>
+      <div><div class="label">異動類型</div><p style="font-size:13px;margin-top:4px">${req.changeType||'—'}</p></div>
+      <div><div class="label">申請原因</div><p style="font-size:13px;margin-top:4px;font-weight:500;color:var(--teal)">${req.reasonType||'—'}</p></div>
+      <div><div class="label">平均週用量</div><p style="font-size:13px;margin-top:4px">${req.weekly||'—'}</p></div>
+    </div>
+    <table class="dtbl" style="margin-bottom:16px">
+      <thead><tr><th>#</th><th>藥品名稱（含規格）</th><th style="text-align:center">變更前</th><th style="text-align:center">變更後</th></tr></thead>
+      <tbody>${drugsHtml || '<tr><td colspan="4" style="text-align:center;color:var(--hint)">無藥品明細</td></tr>'}</tbody>
+    </table>
+    ${req.reason ? `<div class="field"><div class="label">補充說明</div><div style="font-size:13px;padding:12px;background:var(--surface2);border-radius:var(--r-sm);margin-top:5px;line-height:1.7">${req.reason}</div></div>` : ''}`;
+
+  // Flow tab - 顯示Power Automate簽核說明
+  document.getElementById('sign-flow-content').innerHTML = `
+    <div class="info-box" style="margin-bottom:18px">
+      ℹ️ 簽核流程由 <strong>Power Automate</strong> 自動管理。簽核人員將收到 Outlook 通知信，直接在信件中點擊核准/退回。
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${['廖瑋儀（二級主管）','謝燦珊（第二關）','李秋玫（藥師）','吳秋宜（藥庫）','謝承翰（副主任）','莊謹如（主任）'].map((name,i) => `
+        <div class="sign-step">
+          <div class="sign-circle ${req.status==='done'?'sc-done':'sc-wait'}">${req.status==='done'?'✓':i+1}</div>
+          <div class="sign-info">
+            <div class="sign-action">
+              <div>
+                <div class="sign-name">${name}</div>
+                <div class="sign-role">第 ${i+1} 關簽核</div>
+                <div class="sign-time">${req.status==='done'?'已完成':'由 Outlook 信件簽核'}</div>
+              </div>
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+
+  document.getElementById('sign-select-msg').style.display = 'none';
+  document.getElementById('sign-detail').style.display = 'block';
+  showPage('sign');
+}
+
+function renderSignFlow(req) {
+  const doneCount = req.signs.filter(s => s.done).length;
+  const html = req.signs.map((s, i) => {
+    const isDone = s.done;
+    const isActive = !isDone && i === doneCount;
+    const cls = isDone ? 'sc-done' : (isActive ? 'sc-active' : 'sc-wait');
+    const icon = isDone ? '✓' : (i + 1);
+    const timeHtml = isDone
+      ? `<div class="sign-time">${s.time}</div>`
+      : (isActive ? `<div class="sign-time" style="color:var(--amber)">等待簽核中</div>` : `<div class="sign-time">等待前一關完成</div>`);
+    const sigHtml = isDone && s.sig
+      ? `<span class="sig-display">${s.sigText || s.role}</span>`
+      : '';
+    const btnHtml = isActive
+      ? `<button class="sign-btn" onclick="openSignModal(${i})">點此簽核 ✍️</button>`
+      : '';
+    return `<div class="sign-step">
+      <div class="sign-circle ${cls}">${icon}</div>
+      <div class="sign-info">
+        <div class="sign-action">
+          <div>
+            <div class="sign-name">${s.name}</div>
+            <div class="sign-role">${s.role}</div>
+            ${timeHtml}
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">${sigHtml}${btnHtml}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('sign-flow-content').innerHTML = html;
+}
+
+// =============================
+// SIGNATURE MODAL
+// =============================
+function openSignModal(roleIndex) {
+  currentSignRole = roleIndex;
+  let title = '', sub = '';
+  if (roleIndex === 'pharma') { title = '藥師核章'; sub = '請藥師在下方簽名確認評核意見'; }
+  else if (roleIndex === 'mgmt') { title = '藥品管理組核章'; sub = '請藥品管理組人員簽名確認'; }
+  else {
+    const req = loadReqs().find(r => r.id === currentReqId);
+    if (req) { title = req.signs[roleIndex].role + ' 簽核'; sub = `請 ${req.signs[roleIndex].name} 在下方完成電子簽名`; }
+  }
+  document.getElementById('sm-title').textContent = title;
+  document.getElementById('sm-sub').textContent = sub;
+  document.getElementById('sign-modal').style.display = 'flex';
+  clearSig();
+}
+
+function closeSignModal() {
+  document.getElementById('sign-modal').style.display = 'none';
+}
+
+async function confirmSign() {
+  if (!sigHasContent) { toast('請先完成簽名', 'warn'); return; }
+
+  const req = reqs.find(r => r.id === currentReqId);
+  if (!req) { closeSignModal(); return; }
+
+  // 更新 SharePoint 狀態
+  if (req._spId) {
+    await updateReqStatus(req._spId, [], 'review');
+  }
+
+  closeSignModal();
+  toast('✅ 已記錄！正式簽核請至 Outlook 信件完成。');
+  updateBadges();
+}
+
+// Canvas
+window.addEventListener('load', () => {
+  const canvas = document.getElementById('sigCanvas');
+  sigCtx = canvas.getContext('2d');
+  sigCtx.strokeStyle = '#0d6b52';
+  sigCtx.lineWidth = 2.5;
+  sigCtx.lineCap = 'round';
+  sigCtx.lineJoin = 'round';
+
+  function getPos(e, c) {
+    const r = c.getBoundingClientRect();
+    const sx = c.width / r.width, sy = c.height / r.height;
+    const cx = (e.clientX || e.touches?.[0]?.clientX || 0) - r.left;
+    const cy = (e.clientY || e.touches?.[0]?.clientY || 0) - r.top;
+    return [cx * sx, cy * sy];
+  }
+  canvas.addEventListener('mousedown', e => { sigDrawing=true; sigCtx.beginPath(); sigCtx.moveTo(...getPos(e,canvas)); hideHint(); });
+  canvas.addEventListener('mousemove', e => { if(!sigDrawing) return; sigCtx.lineTo(...getPos(e,canvas)); sigCtx.stroke(); sigHasContent=true; });
+  canvas.addEventListener('mouseup', () => sigDrawing=false);
+  canvas.addEventListener('mouseleave', () => sigDrawing=false);
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); sigDrawing=true; sigCtx.beginPath(); sigCtx.moveTo(...getPos(e,canvas)); hideHint(); }, {passive:false});
+  canvas.addEventListener('touchmove', e => { e.preventDefault(); if(!sigDrawing) return; sigCtx.lineTo(...getPos(e,canvas)); sigCtx.stroke(); sigHasContent=true; }, {passive:false});
+  canvas.addEventListener('touchend', () => sigDrawing=false);
+});
+function hideHint() { document.getElementById('sig-hint').style.opacity='0'; }
+function clearSig() {
+  const c = document.getElementById('sigCanvas');
+  if(sigCtx) sigCtx.clearRect(0,0,c.width,c.height);
+  sigHasContent=false;
+  document.getElementById('sig-hint').style.opacity='1';
+}
+
+// =============================
+// DASHBOARD
+// =============================
+let chartInstances = {};
+
+function renderDash() {
+  document.getElementById('ds-total').textContent = reqs.length;
+  document.getElementById('ds-pending').textContent = reqs.filter(r=>r.status==='pending').length;
+  document.getElementById('ds-done').textContent = reqs.filter(r=>r.status==='done').length;
+  document.getElementById('ds-drugs').textContent = reqs.reduce((a,r)=>a+(r.drugs||[]).length,0);
+
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const textColor = isDark ? '#9c9a92' : '#65645f';
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
+  // Unit chart
+  const unitCounts = {};
+  reqs.forEach(r => { unitCounts[r.unitLabel] = (unitCounts[r.unitLabel]||0)+1; });
+  const unitSorted = Object.entries(unitCounts).sort((a,b)=>b[1]-a[1]);
+  drawBar('chartUnit', unitSorted.map(e=>e[0]), unitSorted.map(e=>e[1]),
+    '#1a9470', textColor, gridColor);
+
+  // Drug chart
+  const drugCounts = {};
+  reqs.forEach(r => r.drugs.forEach(d => {
+    const k = d.name.split(' ')[0];
+    drugCounts[k] = (drugCounts[k]||0)+1;
+  }));
+  const drugSorted = Object.entries(drugCounts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  drawBar('chartDrug', drugSorted.map(e=>e[0]), drugSorted.map(e=>e[1]),
+    '#185FA5', textColor, gridColor);
+
+  // Type donut
+  const typeCounts = { '常備藥':0, '急救藥':0, '不計價藥品':0 };
+  reqs.forEach(r => r.types.forEach(t => { if(typeCounts[t]!==undefined) typeCounts[t]++; }));
+  drawDonut('chartType', Object.keys(typeCounts), Object.values(typeCounts),
+    ['#1a9470','#185FA5','#a86d10'], textColor);
+
+  // Trend
+  const months = [];
+  const counts = [];
+  for(let i=5;i>=0;i--) {
+    const d = new Date(); d.setMonth(d.getMonth()-i);
+    const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    months.push(`${d.getMonth()+1}月`);
+    counts.push(reqs.filter(r=>r.date&&r.date.startsWith(ym)).length);
+  }
+  drawLine('chartTrend', months, counts, '#1a9470', textColor, gridColor);
+}
+
+function drawBar(canvasId, labels, data, color, textColor, gridColor) {
+  if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  chartInstances[canvasId] = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[{ data, backgroundColor: color+'cc', borderRadius:5, borderSkipped:false }] },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ grid:{color:gridColor}, ticks:{color:textColor, font:{size:11}}, beginAtZero:true },
+        y:{ grid:{display:false}, ticks:{color:textColor, font:{size:11}} }
+      }
+    }
+  });
+}
+function drawDonut(canvasId, labels, data, colors, textColor) {
+  if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  chartInstances[canvasId] = new Chart(ctx, {
+    type:'doughnut',
+    data:{ labels, datasets:[{ data, backgroundColor:colors, borderWidth:0, hoverOffset:4 }] },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ color:textColor, font:{size:11}, boxWidth:10, padding:12 } } }
+    }
+  });
+}
+function drawLine(canvasId, labels, data, color, textColor, gridColor) {
+  if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  chartInstances[canvasId] = new Chart(ctx, {
+    type:'line',
+    data:{ labels, datasets:[{
+      data, borderColor:color, backgroundColor:color+'22',
+      borderWidth:2, pointRadius:4, pointBackgroundColor:color, fill:true, tension:.35
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ grid:{color:gridColor}, ticks:{color:textColor, font:{size:11}} },
+        y:{ grid:{color:gridColor}, ticks:{color:textColor, font:{size:11}}, beginAtZero:true }
+      }
+    }
+  });
+}
+
+// =============================
+// CONFIG PAGE
+// =============================
+function renderCfgEditor() {
+  cfg = loadCfg();
+  document.getElementById('cfg-pubkey').value = cfg.pubkey || '';
+  document.getElementById('cfg-svcid').value = cfg.svcid || '';
+  document.getElementById('cfg-tplid').value = cfg.tplid || '';
+  document.getElementById('cfg-sender').value = cfg.sender || '';
+}
+
+function saveConfig() {
+  cfg.pubkey = document.getElementById('cfg-pubkey').value.trim();
+  cfg.svcid  = document.getElementById('cfg-svcid').value.trim();
+  cfg.tplid  = document.getElementById('cfg-tplid').value.trim();
+  cfg.sender = document.getElementById('cfg-sender').value.trim();
+  saveCfg(cfg);
+  toast('✅ 設定已儲存！');
+}
+
+async function testSpConnection() {
+  try {
+    showLoading(true);
+    const r = await fetch(`${SP_API}?$top=1`, {
+      headers: { 'Accept': 'application/json;odata=verbose' },
+      credentials: 'include'
+    });
+    showLoading(false);
+    if (r.ok) {
+      toast('✅ SharePoint 連線成功！');
+    } else {
+      toast(`❌ 連線失敗 (${r.status})，請確認已登入。`, 'warn');
+    }
+  } catch(e) {
+    showLoading(false);
+    toast('❌ 連線錯誤，請確認網路及登入狀態。', 'warn');
+  }
+}
+
+function testEmail() {
+  if (!cfg.pubkey) { toast('請先填入 EmailJS 設定並儲存', 'warn'); return; }
+  try {
+    emailjs.init({ publicKey: cfg.pubkey });
+    emailjs.send(cfg.svcid, cfg.tplid, {
+      to_email: 'test@example.com',
+      to_name: '測試主管',
+      req_id: 'TEST-001',
+      unit: '測試單位',
+      date: new Date().toISOString().split('T')[0],
+      drugs: '測試藥品 10mg (10→20)',
+      reason: '這是測試申請',
+      role: '二級主管',
+      sign_link: window.location.href,
+      sender: cfg.sender
+    }).then(() => toast('✅ 測試信已發送，請檢查信箱'))
+      .catch(e => toast('❌ 發送失敗：' + e.text, 'warn'));
+  } catch(e) { toast('❌ EmailJS 初始化失敗', 'warn'); }
+}
+
+// =============================
+// TOAST
+// =============================
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type === 'warn' ? 'var(--amber)' : 'var(--teal-dark)';
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// =============================
+// DEEP LINK: #sign=ID
+// =============================
+function checkDeepLink() {
+  const hash = window.location.hash;
+  if (hash.startsWith('#sign=')) {
+    const id = hash.slice(6);
+    setTimeout(() => {
+      const req = reqs.find(r => r.id === id);
+      if (req) openReq(id);
+    }, 500);
+  }
+}
+
+// =============================
+// INIT
+// =============================
+document.addEventListener('DOMContentLoaded', async () => {
+  initForm();
+  // 同步載入單位清單和申請紀錄
+  await Promise.all([loadUnitOptions(), loadReqs().then(r => { reqs = r; })]);
+  updateBadges();
+  checkDeepLink();
+  document.querySelectorAll('input[name=drug-type]').forEach(r => {
+    r.addEventListener('change', () => {
+      if (r.value !== 'controlled') {
+        document.getElementById('controlled-alert').style.display = 'none';
+      }
+    });
+  });
+});
+</script>
+</body>
+</html>
