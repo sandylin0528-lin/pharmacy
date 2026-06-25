@@ -13,6 +13,7 @@
   --bg:#f5f4f0;--surface:#ffffff;--surface2:#f0efe9;--surface3:#e8e7e0;
   --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.16);
   --text:#1c1c1a;--muted:#65645f;--hint:#a09f98;
+  --danger: #e53e3e;
   --teal:#0d6b52;--teal-mid:#1a9470;--teal-light:#dff2ea;--teal-dark:#084d3b;
   --amber:#a86d10;--amber-light:#fef3dc;
   --red:#9b2828;--red-light:#fdeaea;
@@ -85,10 +86,11 @@ input[type=date]::-webkit-calendar-picker-indicator{opacity:.5}
 
 /* ===== DRUG TABLE ===== */
 .dtbl{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px}
-.dtbl th{padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);background:var(--surface2);border-bottom:0.5px solid var(--border)}
-.dtbl td{padding:6px 8px;border-bottom:0.5px solid var(--border);vertical-align:middle}
+.dtbl th{padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);background:var(--surface2);border-bottom:0.5px solid var(--border);white-space:nowrap;line-height:1.4}
+.dtbl td{padding:6px 6px;border-bottom:0.5px solid var(--border);vertical-align:top}
 .dtbl tr:last-child td{border-bottom:none}
 .dtbl input{padding:5px 8px;border:0.5px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-size:12px;width:100%}
+.drug-table-wrap{overflow-x:auto;margin-bottom:8px}
 .dtbl input:focus{border-color:var(--teal-mid);outline:none}
 .add-row{width:100%;padding:7px;border:0.5px dashed var(--border2);border-radius:var(--r-sm);background:none;color:var(--muted);cursor:pointer;font-size:12px;transition:all .14s}
 .add-row:hover{background:var(--surface2);color:var(--text);border-color:var(--teal-mid)}
@@ -255,7 +257,7 @@ canvas#sigCanvas{display:block;width:100%;height:130px;cursor:crosshair;touch-ac
           <label class="label">分機號碼 <span class="req">*</span></label>
           <input type="text" class="inp" id="f-ext" placeholder="例：12345">
         </div>
-        <div class="field full">
+        <div class="field">
           <label class="label">申請單位 <span class="req">*</span></label>
           <div class="unit-search-wrap" id="f-unit-wrap">
             <input type="text" class="inp" id="f-unit-input" placeholder="輸入關鍵字搜尋單位…" autocomplete="off"
@@ -264,13 +266,17 @@ canvas#sigCanvas{display:block;width:100%;height:130px;cursor:crosshair;touch-ac
             <div class="unit-dropdown" id="f-unit-dropdown" style="display:none"></div>
           </div>
         </div>
+        <div class="field">
+          <label class="label">單位英文代碼</label>
+          <input type="text" class="inp" id="f-unit-code" placeholder="自動帶入" readonly style="color:var(--muted);background:var(--surface2)">
+        </div>
       </div>
 
       <div class="field" style="margin-bottom:16px">
         <label class="label">申請項目 <span class="req">*</span>　<span style="font-size:11px;color:var(--hint);font-weight:400">（管制藥品請獨立填寫申請）</span></label>
         <div class="radio-group">
-          <label class="radio-item"><input type="radio" name="drug-type" id="t-regular" value="regular" checked> 常備藥</label>
-          <label class="radio-item"><input type="radio" name="drug-type" id="t-emergency" value="emergency"> 急救藥</label>
+          <label class="radio-item"><input type="radio" name="drug-type" id="t-regular" value="regular" checked> 常備藥<span style="font-size:11px;color:var(--hint);margin-left:4px">（病房總品項數需&lt;10項；ADC不在此限）</span></label>
+          <label class="radio-item"><input type="radio" name="drug-type" id="t-emergency" value="emergency"> 急救藥<span style="font-size:11px;color:var(--hint);margin-left:4px">（急救車、成人/小兒/外接急救箱、成人/小兒急救袋）</span></label>
           <label class="radio-item"><input type="radio" name="drug-type" id="t-free" value="free"> 不計價藥品</label>
           <label class="radio-item">
             <input type="radio" name="drug-type" id="t-controlled" value="controlled" onchange="onControlledCheck(this)">
@@ -303,55 +309,30 @@ canvas#sigCanvas{display:block;width:100%;height:130px;cursor:crosshair;touch-ac
           <label class="radio-item"><input type="radio" name="reason-type" value="increase" id="rt-increase" onchange="onReasonTypeChange()"> 📈 使用量增加（＋）</label>
           <label class="radio-item"><input type="radio" name="reason-type" value="decrease" id="rt-decrease" onchange="onReasonTypeChange()"> 📉 使用量減少（－）</label>
           <label class="radio-item"><input type="radio" name="reason-type" value="business" id="rt-business" onchange="onReasonTypeChange()"> 🏥 業務需求增加</label>
-          <label class="radio-item"><input type="radio" name="reason-type" value="other" id="rt-other" onchange="onReasonTypeChange()"> 其他</label>
         </div>
-        <div id="reason-hint" style="font-size:12px;color:var(--muted);margin-bottom:8px;display:none"></div>
+
       </div>
 
       <!-- Section 2 -->
       <div class="section-label">② 申請藥品明細</div>
+      <div class="drug-table-wrap">
       <table class="dtbl">
         <thead>
           <tr>
-            <th style="width:44px">#</th>
-            <th>藥品名稱（含規格）</th>
-            <th style="width:110px">變更前基本量</th>
-            <th style="width:110px">變更後基本量</th>
-            <th style="width:48px"></th>
+            <th style="width:36px">#</th>
+            <th style="min-width:200px">藥品名稱（含規格）</th>
+            <th style="width:80px">變更前<br>基本量</th>
+            <th style="width:80px">變更後<br>基本量</th>
+            <th style="min-width:160px">申請原因</th>
+            <th style="width:90px">過去1-3個月<br>平均週用量</th>
+            <th style="width:90px">（新增品項）<br>預估平均週用量</th>
+            <th style="width:36px"></th>
           </tr>
         </thead>
         <tbody id="drug-tbody"></tbody>
       </table>
+      </div>
       <button class="add-row" onclick="addDrugRow()">＋ 新增藥品項目</button>
-
-      <!-- Section 3 -->
-      <div class="section-label" style="margin-top:22px">③ 申請說明與附件</div>
-      <div class="grid2" style="margin-bottom:14px">
-        <div class="field">
-          <label class="label">附加檔案（Excel）</label>
-          <input type="file" class="inp" id="f-excel" accept=".xlsx,.xls" style="padding:6px">
-        </div>
-        <div class="field">
-          <label class="label">附加檔案（PDF）</label>
-          <input type="file" class="inp" id="f-pdf" accept=".pdf" style="padding:6px">
-        </div>
-      </div>
-
-      <div class="field" style="margin-bottom:14px">
-        <label class="label">補充說明</label>
-        <textarea class="ta" id="f-reason" placeholder="如有其他需要補充說明的內容，請填寫於此…"></textarea>
-      </div>
-
-      <div class="grid2">
-        <div class="field">
-          <label class="label">過去 1–3 個月平均週用量 <span class="req">*</span></label>
-          <input type="text" class="inp" id="f-weekly" placeholder="例：15 支 / 週">
-        </div>
-        <div class="field">
-          <label class="label">（新增品項）預估平均週用量</label>
-          <input type="text" class="inp" id="f-weekly-new" placeholder="新品項填寫">
-        </div>
-      </div>
     </div>
   </div>
 
@@ -635,7 +616,7 @@ canvas#sigCanvas{display:block;width:100%;height:130px;cursor:crosshair;touch-ac
           <label class="label">分機號碼 <span class="req">*</span></label>
           <input type="text" class="inp" id="cf-ext" placeholder="例：12345">
         </div>
-        <div class="field full">
+        <div class="field">
           <label class="label">申請單位 <span class="req">*</span></label>
           <div class="unit-search-wrap" id="cf-unit-wrap">
             <input type="text" class="inp" id="cf-unit-input" placeholder="輸入關鍵字搜尋單位…" autocomplete="off"
@@ -644,12 +625,9 @@ canvas#sigCanvas{display:block;width:100%;height:130px;cursor:crosshair;touch-ac
             <div class="unit-dropdown" id="cf-unit-dropdown" style="display:none"></div>
           </div>
         </div>
-      </div>
-
-      <div class="field" style="margin-bottom:16px">
-        <label class="label">申請項目</label>
-        <div style="display:inline-flex;align-items:center;gap:8px;padding:7px 14px;background:var(--coral-light);border-radius:var(--r-sm);font-size:13px;color:var(--coral);font-weight:500">
-          🔐 管制藥品（獨立申請）
+        <div class="field">
+          <label class="label">單位英文代碼</label>
+          <input type="text" class="inp" id="cf-unit-code" placeholder="自動帶入" readonly style="color:var(--muted);background:var(--surface2)">
         </div>
       </div>
 
@@ -668,58 +646,39 @@ canvas#sigCanvas{display:block;width:100%;height:130px;cursor:crosshair;touch-ac
           <label class="radio-item"><input type="radio" name="cf-reason" value="increase"> 📈 使用量增加（＋）</label>
           <label class="radio-item"><input type="radio" name="cf-reason" value="decrease"> 📉 使用量減少（－）</label>
           <label class="radio-item"><input type="radio" name="cf-reason" value="business"> 🏥 業務需求增加</label>
-          <label class="radio-item"><input type="radio" name="cf-reason" value="other"> 其他</label>
         </div>
       </div>
 
       <div class="section-label">② 管制藥品明細</div>
+      <div class="drug-table-wrap">
       <table class="dtbl">
         <thead>
           <tr>
-            <th style="width:44px">#</th>
-            <th>管制藥品名稱（含規格）</th>
-            <th style="width:110px">變更前基本量</th>
-            <th style="width:110px">變更後基本量</th>
-            <th style="width:48px"></th>
+            <th style="width:36px">#</th>
+            <th style="min-width:200px">管制藥品名稱（含規格）</th>
+            <th style="width:80px">變更前<br>基本量</th>
+            <th style="width:80px">變更後<br>基本量</th>
+            <th style="min-width:160px">申請原因</th>
+            <th style="width:90px">過去1-3個月<br>平均週用量</th>
+            <th style="width:90px">（新增品項）<br>預估平均週用量</th>
+            <th style="width:36px"></th>
           </tr>
         </thead>
         <tbody id="cf-drug-tbody">
           <tr>
             <td style="text-align:center;color:var(--hint);font-size:12px">1</td>
-            <td><input type="text" placeholder="請輸入管制藥品名稱及規格" data-field="name" class="cf-name-inp"></td>
-            <td><input type="text" placeholder="變更前" data-field="before" style="text-align:center"></td>
-            <td><input type="text" placeholder="變更後" data-field="after" style="text-align:center"></td>
+            <td><input type="text" placeholder="請輸入管制藥品名稱及規格" data-field="name" class="cf-name-inp" style="min-width:180px"></td>
+            <td><input type="text" placeholder="變更前" data-field="before" style="text-align:center;width:70px"></td>
+            <td><input type="text" placeholder="變更後" data-field="after" style="text-align:center;width:70px"></td>
+            <td><textarea placeholder="請說明申請原因…" data-field="reason" style="width:100%;min-height:38px;resize:vertical;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);line-height:1.4"></textarea></td>
+            <td><input type="text" placeholder="例：15支" data-field="weekly" style="text-align:center;width:80px"></td>
+            <td><input type="text" placeholder="新品項填寫" data-field="weeklyNew" style="text-align:center;width:80px"></td>
             <td style="text-align:center"><button class="del-btn" onclick="delCRow(this)">✕</button></td>
           </tr>
         </tbody>
       </table>
+      </div>
       <button class="add-row" onclick="addCRow()" style="margin-bottom:20px">＋ 新增管制藥品項目</button>
-
-      <div class="section-label">③ 申請說明與附件</div>
-      <div class="grid2" style="margin-bottom:14px">
-        <div class="field">
-          <label class="label">附加檔案（Excel）</label>
-          <input type="file" class="inp" accept=".xlsx,.xls" style="padding:6px">
-        </div>
-        <div class="field">
-          <label class="label">附加檔案（PDF）</label>
-          <input type="file" class="inp" accept=".pdf" style="padding:6px">
-        </div>
-      </div>
-      <div class="field" style="margin-bottom:14px">
-        <label class="label">補充說明</label>
-        <textarea class="ta" id="cf-reason-text" placeholder="如有其他需要補充說明的內容，請填寫於此…"></textarea>
-      </div>
-      <div class="grid2">
-        <div class="field">
-          <label class="label">過去 1–3 個月平均週用量 <span class="req">*</span></label>
-          <input type="text" class="inp" id="cf-weekly" placeholder="例：15 支 / 週">
-        </div>
-        <div class="field">
-          <label class="label">（新增品項）預估平均週用量</label>
-          <input type="text" class="inp" id="cf-weekly-new2" placeholder="新品項填寫">
-        </div>
-      </div>
 
       <!-- Submit row -->
       <div style="display:flex;justify-content:space-between;align-items:center;padding-top:20px;border-top:0.5px solid var(--border);margin-top:20px">
@@ -766,71 +725,79 @@ let unitOptions = []; // [{ label:'藥劑部', campus:'PHR' }, ...]
 async function loadUnitOptions() {
   // 單位清單（從 單位主管對照表_含單位中文 匯出，共66個單位）
   unitOptions = [
-    {"label":"NICU","campus":"斗六院區"},
-    {"label":"2A內科加護病房","campus":"斗六院區"},
-    {"label":"2B外科加護病房","campus":"斗六院區"},
-    {"label":"2病房","campus":"斗六院區"},
-    {"label":"3A內兒科病房","campus":"斗六院區"},
-    {"label":"3B婦產科病房","campus":"斗六院區"},
-    {"label":"3N加護病房","campus":"虎尾院區"},
-    {"label":"5A外科病房","campus":"斗六院區"},
-    {"label":"5B骨科病房","campus":"斗六院區"},
-    {"label":"5N腫瘤病房","campus":"虎尾院區"},
-    {"label":"5S安寧病房","campus":"虎尾院區"},
-    {"label":"6A內科病房","campus":"斗六院區"},
-    {"label":"6B內科病房","campus":"斗六院區"},
-    {"label":"6N內科病房","campus":"虎尾院區"},
-    {"label":"6S內科病房","campus":"虎尾院區"},
-    {"label":"7A1內科病房","campus":"斗六院區"},
-    {"label":"7A2呼吸照護中心","campus":"斗六院區"},
-    {"label":"7B一般隔離病房","campus":"斗六院區"},
-    {"label":"7B負壓隔離病房","campus":"斗六院區"},
-    {"label":"7N外科系病房","campus":"虎尾院區"},
-    {"label":"8W精神科病房","campus":"斗六院區"},
-    {"label":"9W精神科病房","campus":"斗六院區"},
-    {"label":"10W精神科病房","campus":"斗六院區"},
-    {"label":"11W精神科病房","campus":"斗六院區"},
-    {"label":"12W精神科病房","campus":"斗六院區"},
-    {"label":"一般醫學","campus":"斗六院區"},
-    {"label":"小兒部","campus":"虎尾院區"},
-    {"label":"內科部","campus":"虎尾院區"},
-    {"label":"牙科部","campus":"斗六院區"},
-    {"label":"外科部","campus":"虎尾院區"},
-    {"label":"正子中心","campus":"虎尾院區"},
-    {"label":"皮膚部","campus":"斗六院區"},
-    {"label":"耳鼻喉部","campus":"斗六院區"},
-    {"label":"血液透析室","campus":"斗六院區"},
-    {"label":"尿動室","campus":"虎尾院區"},
-    {"label":"社區及家庭醫學部","campus":"斗六院區"},
-    {"label":"供應室","campus":"斗六院區"},
-    {"label":"居家護理","campus":"斗六院區"},
-    {"label":"放射腫瘤科","campus":"虎尾院區"},
-    {"label":"泌尿部","campus":"虎尾院區"},
-    {"label":"急診醫學部","campus":"斗六院區"},
-    {"label":"核子醫學部","campus":"虎尾院區"},
-    {"label":"病理部","campus":"斗六院區"},
-    {"label":"神經部","campus":"虎尾院區"},
-    {"label":"骨科部","campus":"虎尾院區"},
-    {"label":"骨髓移植中心","campus":"虎尾院區"},
-    {"label":"健康管理中心","campus":"斗六院區"},
-    {"label":"婦產部","campus":"虎尾院區"},
-    {"label":"眼科部","campus":"虎尾院區"},
-    {"label":"麻醉部","campus":"虎尾院區"},
-    {"label":"復健部","campus":"虎尾院區"},
-    {"label":"超音波、內視鏡室","campus":"斗六院區"},
-    {"label":"開刀房","campus":"虎尾院區"},
-    {"label":"碎石室","campus":"虎尾院區"},
-    {"label":"腫瘤醫學中心","campus":"虎尾院區"},
-    {"label":"腫瘤醫學部","campus":"虎尾院區"},
-    {"label":"腹膜透析室","campus":"斗六院區"},
-    {"label":"精準醫學中心","campus":"虎尾院區"},
-    {"label":"精神部","campus":"虎尾院區"},
-    {"label":"影像醫學部","campus":"虎尾院區"},
-    {"label":"嬰兒室(BR)","campus":"斗六院區"},
-    {"label":"檢驗醫學部","campus":"斗六院區"},
-    {"label":"醫學美容中心","campus":"虎尾院區"},
-    {"label":"藥劑部","campus":"虎尾院區"},
-    {"label":"護理之家","campus":"斗六院區"},
+    {"label":"NICU","campus":"斗六院區","code":"YI3N"},
+    {"label":"2A內科加護病房","campus":"斗六院區","code":"YI2A"},
+    {"label":"2B外科加護病房","campus":"斗六院區","code":"YI2B"},
+    {"label":"2病房","campus":"斗六院區","code":"Y002"},
+    {"label":"3A內兒科病房","campus":"斗六院區","code":"Y03A"},
+    {"label":"3B婦產科病房","campus":"斗六院區","code":"Y03B"},
+    {"label":"3N加護病房","campus":"虎尾院區","code":"YI3N"},
+    {"label":"5A外科病房","campus":"斗六院區","code":"Y05A"},
+    {"label":"5B骨科病房","campus":"斗六院區","code":"Y05B"},
+    {"label":"5N腫瘤病房","campus":"虎尾院區","code":"YH5N"},
+    {"label":"5S安寧病房","campus":"虎尾院區","code":"YH5S"},
+    {"label":"6A內科病房","campus":"斗六院區","code":"Y06A"},
+    {"label":"6B內科病房","campus":"斗六院區","code":"Y06B"},
+    {"label":"6N內科病房","campus":"虎尾院區","code":"YH6N"},
+    {"label":"6S內科病房","campus":"虎尾院區","code":"YH6S"},
+    {"label":"7A1內科病房","campus":"斗六院區","code":"Y07A"},
+    {"label":"7A2呼吸照護中心","campus":"斗六院區","code":"YRCC"},
+    {"label":"7B一般隔離病房","campus":"斗六院區","code":"Y07B"},
+    {"label":"7B負壓隔離病房","campus":"斗六院區","code":"YT7B"},
+    {"label":"7N外科系病房","campus":"虎尾院區","code":"YH7N"},
+    {"label":"8W精神科病房","campus":"斗六院區","code":"Y008"},
+    {"label":"9W精神科病房","campus":"斗六院區","code":"Y009"},
+    {"label":"10W精神科病房","campus":"斗六院區","code":"Y011"},
+    {"label":"11W精神科病房","campus":"斗六院區","code":"Y010"},
+    {"label":"12W精神科病房","campus":"斗六院區","code":"YLDH"},
+    {"label":"小兒部","campus":"虎尾院區","code":"HPED"},
+    {"label":"內科部","campus":"虎尾院區","code":"HMED"},
+    {"label":"心導管室","campus":"斗六院區","code":"Y0CR"},
+    {"label":"心臟超音波室","campus":"虎尾院區","code":"HSNG"},
+    {"label":"牙科部","campus":"斗六院區","code":"DENT"},
+    {"label":"外科部","campus":"虎尾院區","code":"HSUR"},
+    {"label":"正子中心","campus":"虎尾院區","code":"HNM"},
+    {"label":"皮膚部","campus":"斗六院區","code":"DERM"},
+    {"label":"耳鼻喉部","campus":"斗六院區","code":"ENT"},
+    {"label":"血液透析室","campus":"斗六院區","code":"DIA"},
+    {"label":"尿動室","campus":"虎尾院區","code":"HUR"},
+    {"label":"社區及家庭醫學部","campus":"斗六院區","code":"FM"},
+    {"label":"供應室","campus":"斗六院區","code":"CSR"},
+    {"label":"居家護理","campus":"虎尾院區","code":"HZ03"},
+    {"label":"放射腫瘤科","campus":"虎尾院區","code":"HRT1"},
+    {"label":"泌尿部","campus":"虎尾院區","code":"HURO"},
+    {"label":"急診醫學部","campus":"斗六院區","code":"EMER"},
+    {"label":"核子醫學部","campus":"虎尾院區","code":"HNM"},
+    {"label":"病理部","campus":"斗六院區","code":"PAT"},
+    {"label":"神經檢查室","campus":"虎尾院區","code":"HNE1"},
+    {"label":"神經部","campus":"虎尾院區","code":"HNEU"},
+    {"label":"骨科部","campus":"虎尾院區","code":"HORT"},
+    {"label":"骨科門診","campus":"斗六院區","code":"ORTR"},
+    {"label":"骨髓移植中心","campus":"虎尾院區","code":"HBMT"},
+    {"label":"健康管理中心","campus":"斗六院區","code":"HMC"},
+    {"label":"婦產科門診","campus":"斗六院區","code":"OBGR"},
+    {"label":"婦產部","campus":"虎尾院區","code":"HOBG"},
+    {"label":"眼科部","campus":"虎尾院區","code":"HOPH"},
+    {"label":"麻醉部","campus":"虎尾院區","code":"HPC"},
+    {"label":"復健科門診","campus":"斗六院區","code":"PMRA"},
+    {"label":"復健部","campus":"虎尾院區","code":"HPMO"},
+    {"label":"超音波、內視鏡室","campus":"斗六院區","code":"Y0ES"},
+    {"label":"開刀房","campus":"虎尾院區","code":"HOR"},
+    {"label":"碎石室","campus":"虎尾院區","code":"YHBS"},
+    {"label":"腫瘤內科","campus":"虎尾院區","code":"HRT2"},
+    {"label":"腫瘤醫學中心","campus":"虎尾院區","code":"HMOC"},
+    {"label":"腫瘤醫學部","campus":"虎尾院區","code":"HONC"},
+    {"label":"腹膜透析室","campus":"斗六院區","code":"MRR"},
+    {"label":"精準醫學中心","campus":"虎尾院區","code":"HPMC"},
+    {"label":"精神部","campus":"斗六院區","code":"PSY"},
+    {"label":"影像醫學部","campus":"虎尾院區","code":"HRAD"},
+    {"label":"嬰兒室(BR)","campus":"斗六院區","code":"Y0PB"},
+    {"label":"檢驗醫學部","campus":"斗六院區","code":"HLAB"},
+    {"label":"醫學美容中心","campus":"虎尾院區","code":"HMAC"},
+    {"label":"藥劑部","campus":"斗六院區","code":"PHR"},
+    {"label":"護理之家","campus":"斗六院區","code":"Y0NH"},
+    {"label":"化療室","campus":"虎尾院區","code":"YHCR"},
+    {"label":"教研部","campus":"虎尾院區","code":"HLAR"},
   ];
   renderUnitDropdown('f', '');
   renderUnitDropdown('cf', '');
@@ -867,7 +834,7 @@ function renderUnitDropdown(prefix, keyword) {
       ? u.label.replace(new RegExp(`(${kw})`, 'gi'), '<mark>$1</mark>')
       : u.label;
     const campusTag = !selectedCampus && u.campus ? `<span style="font-size:10px;color:var(--hint);margin-left:6px">${u.campus}</span>` : '';
-    return `<div class="unit-option" onmousedown="selectUnit('${prefix}','${u.label.replace(/'/g,"\\'")}','${u.campus}')">${highlighted}${campusTag}</div>`;
+    return `<div class="unit-option" onmousedown="selectUnit('${prefix}','${u.label.replace(/'/g,"\\'")}','${u.campus}','${u.code || ''}')">${highlighted}${campusTag}</div>`;
   }).join('');
 }
 
@@ -908,12 +875,15 @@ function hideUnitDropdown(prefix) {
   }, 200);
 }
 
-function selectUnit(prefix, label, campus) {
+function selectUnit(prefix, label, campus, code) {
   document.getElementById(`${prefix}-unit-input`).value = label;
   document.getElementById(`${prefix}-unit`).value = label;
   const dropdown = document.getElementById(`${prefix}-unit-dropdown`);
   if (dropdown) dropdown.style.display = 'none';
-  // 如果是主表單，自動帶院區
+  // 自動帶入英文代碼
+  const codeEl = document.getElementById(`${prefix}-unit-code`);
+  if (codeEl) codeEl.value = code || '';
+  // 自動帶院區
   if (prefix === 'f') {
     const campusMap = { '斗六院區':'douliou', '虎尾院區':'huwei' };
     if (campus && campusMap[campus]) {
@@ -1169,14 +1139,12 @@ function initForm() {
   document.getElementById('f-unit').value = '';
   const unitInput = document.getElementById('f-unit-input');
   if (unitInput) unitInput.value = '';
+  const unitCode = document.getElementById('f-unit-code');
+  if (unitCode) unitCode.value = '';
   document.getElementById('f-campus').value = '';
-  document.getElementById('f-reason').value = '';
-  document.getElementById('f-weekly').value = '';
-  document.getElementById('f-weekly-new').value = '';
   document.getElementById('t-regular').checked = true;
   document.getElementById('controlled-alert').style.display = 'none';
   document.getElementById('sup-card').style.display = 'none';
-  document.getElementById('reason-hint').style.display = 'none';
   document.querySelector('input[name=chg][value=qty]').checked = true;
   document.querySelectorAll('input[name=reason-type]').forEach(r => r.checked = false);
   document.getElementById('drug-tbody').innerHTML = '';
@@ -1218,8 +1186,11 @@ function openControlledForm() {
   document.getElementById('cf-ext').value = '';
   document.getElementById('cf-campus').value = '';
   document.getElementById('cf-unit').value = '';
-  document.getElementById('cf-weekly').value = '';
-  document.getElementById('cf-reason-text').value = '';
+  const cfUnitInput = document.getElementById('cf-unit-input');
+  if (cfUnitInput) cfUnitInput.value = '';
+  const cfUnitCode = document.getElementById('cf-unit-code');
+  if (cfUnitCode) cfUnitCode.value = '';
+  
   document.querySelectorAll('input[name=cf-chg]')[0].checked = true;
   document.querySelectorAll('input[name=cf-reason]').forEach(r => r.checked = false);
   // Reset drug rows
@@ -1227,9 +1198,12 @@ function openControlledForm() {
   const tbody = document.getElementById('cf-drug-tbody');
   tbody.innerHTML = `<tr>
     <td style="text-align:center;color:var(--hint);font-size:12px">1</td>
-    <td><input type="text" placeholder="請輸入管制藥品名稱及規格" data-field="name" class="cf-name-inp"></td>
-    <td><input type="text" placeholder="變更前" data-field="before" style="text-align:center"></td>
-    <td><input type="text" placeholder="變更後" data-field="after" style="text-align:center"></td>
+    <td><input type="text" placeholder="請輸入管制藥品名稱及規格" data-field="name" class="cf-name-inp" style="min-width:180px"></td>
+    <td><input type="text" placeholder="變更前" data-field="before" style="text-align:center;width:70px"></td>
+    <td><input type="text" placeholder="變更後" data-field="after" style="text-align:center;width:70px"></td>
+    <td><textarea placeholder="請說明申請原因…" data-field="reason" style="width:100%;min-height:38px;resize:vertical;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);line-height:1.4"></textarea></td>
+    <td><input type="text" placeholder="例：15支" data-field="weekly" style="text-align:center;width:80px"></td>
+    <td><input type="text" placeholder="新品項填寫" data-field="weeklyNew" style="text-align:center;width:80px"></td>
     <td style="text-align:center"><button class="del-btn" onclick="delCRow(this)">✕</button></td>
   </tr>`;
   // Show overlay
@@ -1249,10 +1223,14 @@ function addCRow() {
   cfRowCount++;
   const tbody = document.getElementById('cf-drug-tbody');
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td style="text-align:center;color:var(--hint);font-size:12px">${cfRowCount}</td>
-    <td><input type="text" placeholder="請輸入管制藥品名稱及規格" data-field="name" class="cf-name-inp"></td>
-    <td><input type="text" placeholder="變更前" data-field="before" style="text-align:center"></td>
-    <td><input type="text" placeholder="變更後" data-field="after" style="text-align:center"></td>
+  tr.innerHTML = `
+    <td style="text-align:center;color:var(--hint);font-size:12px">${cfRowCount}</td>
+    <td><input type="text" placeholder="請輸入管制藥品名稱及規格" data-field="name" class="cf-name-inp" style="min-width:180px"></td>
+    <td><input type="text" placeholder="變更前" data-field="before" style="text-align:center;width:70px"></td>
+    <td><input type="text" placeholder="變更後" data-field="after" style="text-align:center;width:70px"></td>
+    <td><textarea placeholder="請說明申請原因…" data-field="reason" style="width:100%;min-height:38px;resize:vertical;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);line-height:1.4"></textarea></td>
+    <td><input type="text" placeholder="例：15支" data-field="weekly" style="text-align:center;width:80px"></td>
+    <td><input type="text" placeholder="新品項填寫" data-field="weeklyNew" style="text-align:center;width:80px"></td>
     <td style="text-align:center"><button class="del-btn" onclick="delCRow(this)">✕</button></td>`;
   tbody.appendChild(tr);
 }
@@ -1263,23 +1241,36 @@ async function submitControlled() {
   const campus = document.getElementById('cf-campus').value;
   const applicant = document.getElementById('cf-applicant').value.trim();
   const ext = document.getElementById('cf-ext').value.trim();
-  const unit = document.getElementById('cf-unit').value;  // hidden input
+  const unit = document.getElementById('cf-unit').value;
   const reason = document.querySelector('input[name=cf-reason]:checked');
-  const weekly = document.getElementById('cf-weekly').value.trim();
   if (!campus)    { toast('請選擇院區', 'warn'); return; }
   if (!applicant) { toast('請填寫申請人姓名', 'warn'); return; }
   if (!ext)       { toast('請填寫分機號碼', 'warn'); return; }
   if (!unit)      { toast('請選擇申請單位', 'warn'); return; }
   if (!reason)    { toast('請選擇申請原因', 'warn'); return; }
-  if (!weekly)    { toast('請填寫平均週用量', 'warn'); return; }
+
   const drugs = [];
+  let drugEmpty = false;
   document.querySelectorAll('#cf-drug-tbody tr').forEach(tr => {
-    const name = tr.querySelector('[data-field=name]')?.value.trim();
-    if (name) drugs.push(name);
+    const nameInput = tr.querySelector('[data-field=name]');
+    const name = nameInput?.value.trim();
+    const before = tr.querySelector('[data-field=before]')?.value.trim() || '';
+    const after = tr.querySelector('[data-field=after]')?.value.trim() || '';
+    const drugReason = tr.querySelector('[data-field=reason]')?.value.trim() || '';
+    const weekly = tr.querySelector('[data-field=weekly]')?.value.trim() || '';
+    const weeklyNew = tr.querySelector('[data-field=weeklyNew]')?.value.trim() || '';
+    if (name) {
+      if (nameInput) nameInput.style.borderColor = '';
+      drugs.push({ name, before, after, reason: drugReason, weekly, weeklyNew });
+    } else {
+      if (nameInput) nameInput.style.borderColor = 'var(--danger, #e53e3e)';
+      drugEmpty = true;
+    }
   });
+  if (drugEmpty) { toast('請填寫藥品名稱（含規格）', 'warn'); return; }
   if (drugs.length === 0) { toast('請至少填寫一項管制藥品', 'warn'); return; }
 
-  const reasonLabels = { increase:'使用量增加（＋）', decrease:'使用量減少（－）', business:'業務需求增加', other:'其他' };
+  const reasonLabels = { increase:'使用量增加（＋）', decrease:'使用量減少（－）', business:'業務需求增加' };
   const chgLabels = { qty:'修改基本量', add:'新增於書記入帳畫面', remove:'自書記入帳畫面取消' };
   const campusLabels = { douliou:'PHR', huwei:'HPHR' };
   const chgVal = document.querySelector('input[name=cf-chg]:checked').value;
@@ -1294,9 +1285,8 @@ async function submitControlled() {
     types: ['🔐 管制藥品'],
     changeType: chgLabels[chgVal],
     reasonType: reasonLabels[reason.value],
-    drugs: drugs.map(n => ({ name: n, before:'', after:'' })),
-    reason: document.getElementById('cf-reason-text').value.trim(),
-    weekly, weeklyNew: '',
+    drugs,
+    
     status: 'pending',
   };
 
@@ -1310,22 +1300,8 @@ async function submitControlled() {
   }
 }
 
-// Reason type radio change
-const reasonHints = {
-  increase: '📈 使用量增加：請於補充說明欄填寫近期使用趨勢及增加原因。',
-  decrease: '📉 使用量減少：請於補充說明欄說明使用量下降原因，並確認新基本量合理。',
-  business: '🏥 業務需求增加：請於補充說明欄說明業務內容異動或新增醫療服務項目。',
-  other: '請於補充說明欄詳述申請原因。'
-};
 function onReasonTypeChange() {
-  const val = document.querySelector('input[name=reason-type]:checked')?.value;
-  const hint = document.getElementById('reason-hint');
-  if (val && reasonHints[val]) {
-    hint.textContent = reasonHints[val];
-    hint.style.display = 'block';
-  } else {
-    hint.style.display = 'none';
-  }
+  // 不顯示提示文字
 }
 
 
@@ -1336,9 +1312,12 @@ function addDrugRow() {
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td style="text-align:center;color:var(--hint);font-size:12px">${drugRowCount}</td>
-    <td><input type="text" placeholder="請輸入藥品名稱及規格" data-field="name"></td>
-    <td><input type="text" placeholder="變更前" data-field="before" style="text-align:center"></td>
-    <td><input type="text" placeholder="變更後" data-field="after" style="text-align:center"></td>
+    <td><input type="text" placeholder="請輸入藥品名稱及規格" data-field="name" style="min-width:180px"></td>
+    <td><input type="text" placeholder="變更前" data-field="before" style="text-align:center;width:70px"></td>
+    <td><input type="text" placeholder="變更後" data-field="after" style="text-align:center;width:70px"></td>
+    <td><textarea placeholder="請說明申請原因…" data-field="reason" style="width:100%;min-height:38px;resize:vertical;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);line-height:1.4"></textarea></td>
+    <td><input type="text" placeholder="例：15支" data-field="weekly" style="text-align:center;width:80px"></td>
+    <td><input type="text" placeholder="新品項填寫" data-field="weeklyNew" style="text-align:center;width:80px"></td>
     <td style="text-align:center"><button class="del-btn" onclick="delDrugRow(this)">✕</button></td>`;
   tbody.appendChild(tr);
 }
@@ -1354,8 +1333,6 @@ async function submitForm() {
   const campus = document.getElementById('f-campus').value;
   const applicant = document.getElementById('f-applicant').value.trim();
   const ext = document.getElementById('f-ext').value.trim();
-  const weekly = document.getElementById('f-weekly').value.trim();
-  const weeklyNew = document.getElementById('f-weekly-new').value.trim();
   const reasonType = document.querySelector('input[name=reason-type]:checked');
 
   if (!campus) { toast('請選擇院區', 'warn'); return; }
@@ -1366,13 +1343,25 @@ async function submitForm() {
   if (!weekly) { toast('請填寫平均週用量', 'warn'); return; }
 
   const drugs = [];
+  let drugEmpty = false;
   document.querySelectorAll('#drug-tbody tr').forEach(tr => {
-    const name = tr.querySelector('[data-field=name]').value.trim();
+    const nameInput = tr.querySelector('[data-field=name]');
+    const name = nameInput.value.trim();
     const before = tr.querySelector('[data-field=before]').value.trim();
     const after = tr.querySelector('[data-field=after]').value.trim();
-    if (name) drugs.push({ name, before, after });
+    const reason = tr.querySelector('[data-field=reason]').value.trim();
+    const weekly = tr.querySelector('[data-field=weekly]').value.trim();
+    const weeklyNew = tr.querySelector('[data-field=weeklyNew]').value.trim();
+    if (name) {
+      nameInput.style.borderColor = '';
+      drugs.push({ name, before, after, reason, weekly, weeklyNew });
+    } else {
+      nameInput.style.borderColor = 'var(--danger, #e53e3e)';
+      drugEmpty = true;
+    }
   });
-  if (drugs.length === 0) { toast('請至少填寫一項藥品', 'warn'); return; }
+  if (drugEmpty) { toast('請填寫藥品名稱（含規格）', 'warn'); return; }
+  if (drugs.length === 0) { toast('請至少填寫一項藥品明細', 'warn'); return; }
 
   const drugTypeVal = document.querySelector('input[name=drug-type]:checked')?.value;
   const drugTypeLabels = { regular:'常備藥', emergency:'急救藥', free:'不計價藥品' };
@@ -1381,7 +1370,7 @@ async function submitForm() {
 
   const chgType = document.querySelector('input[name=chg]:checked').value;
   const chgLabels = { qty:'修改基本量', add:'新增於書記入帳畫面', remove:'自書記入帳畫面取消' };
-  const reasonLabels = { increase:'使用量增加（＋）', decrease:'使用量減少（－）', business:'業務需求增加', other:'其他' };
+  const reasonLabels = { increase:'使用量增加（＋）', decrease:'使用量減少（－）', business:'業務需求增加' };
   const campusLabels = { douliou:'PHR', huwei:'HPHR' };
 
   const id = 'RX-' + new Date().getFullYear() + '-' + String(Date.now()).slice(-5);
@@ -1396,8 +1385,6 @@ async function submitForm() {
     changeType: chgLabels[chgType],
     reasonType: reasonLabels[reasonType.value],
     drugs,
-    reason: document.getElementById('f-reason').value.trim(),
-    weekly, weeklyNew,
     status: 'pending',
   };
 
