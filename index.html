@@ -981,42 +981,36 @@ function spStatusToLocal(s) {
 }
 
 // 新增申請到 SharePoint
+// =============================
+// Google Apps Script 中介 API
+// =============================
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyk8u8AoZQavHpmH3ofCFyMSt1D9-KV5ay1An_A8LaCRFi8orJyjpmYEXHOpT148jI/exec';
+
 async function saveNewReq(req) {
   try {
-    const digest = await getDigest();
+    const drugs = JSON.stringify(req.drugs || []);
     const payload = {
-      '__metadata': { 'type': `SP.Data.${encodeURIComponent(SP_LIST).replace(/%20/g,'_x0020_').replace(/%2F/g,'_x002F_')}ListItem` },
-      'Title': req.id,
-      '申請日期': req.date,
-      '申請院區': req.campus,
-      '申請單位': req.unitLabel,
-      '申請項目': req.types.join(''),
-      '異動項目': req.changeType,
-      '申請原因': req.reasonType,
-      '平均週用量': parseFloat(req.weekly) || 0,
-      '新增品項之預估用量': parseFloat(req.weeklyNew) || 0,
-      '藥品明細': JSON.stringify(req.drugs),
-      '申請分機': req.ext,
-      '目前狀態': '待審核',
+      申請編號: req.id,
+      申請日期: req.date,
+      院區: req.campusLabel || req.campus,
+      申請人: req.applicant,
+      分機: req.ext,
+      申請單位中文: req.unitLabel || req.unit,
+      單位代碼: document.getElementById('f-unit-code')?.value || '',
+      申請項目: (req.types || []).join('、'),
+      異動項目: req.changeType,
+      申請原因: req.reasonType,
+      藥品明細: drugs,
     };
-    const r = await fetch(SP_API, {
+    const r = await fetch(GAS_URL, {
       method: 'POST',
-      headers: {
-        'Accept': 'application/json;odata=verbose',
-        'Content-Type': 'application/json;odata=verbose',
-        'X-RequestDigest': digest
-      },
-      credentials: 'include',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload)
     });
-    if (!r.ok) {
-      const err = await r.json();
-      console.error('儲存失敗', err);
-      return false;
-    }
-    return true;
+    const d = await r.json();
+    return d.status === 'success';
   } catch(e) {
-    console.error('儲存例外', e);
+    console.error('送出失敗', e);
     return false;
   }
 }
@@ -1292,7 +1286,7 @@ async function submitControlled() {
 
   const ok = await saveNewReq(req);
   if (ok) {
-    toast('✅ 管制藥品申請已送出！');
+    toast('✅ 您已提出申請，系統將自動發送給二級單位主管簽章。');
     closeControlledForm();
     setTimeout(() => showPage('list'), 1200);
   } else {
@@ -1396,7 +1390,7 @@ async function submitForm() {
   if (btn) { btn.disabled = false; btn.textContent = '🚀 送出申請'; }
 
   if (ok) {
-    toast('✅ 申請已送出！Power Automate 將自動通知各簽核主管。');
+    toast('✅ 您已提出申請，系統將自動發送給二級單位主管簽章。');
     initForm();
     setTimeout(() => showPage('list'), 1600);
   } else {
