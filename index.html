@@ -920,22 +920,9 @@ async function getDigest() {
 // SHAREPOINT CRUD
 // =============================
 
-// 讀取所有申請（從 SharePoint）
+// 暫時不從SharePoint讀取（跨域限制），改由Google試算表中介
 async function loadReqs() {
-  try {
-    showLoading(true);
-    const r = await fetch(
-      `${SP_API}?$orderby=Created desc&$top=200&$select=Id,Title,申請日期,申請院區,申請單位,申請項目,異動項目,申請原因,平均週用量,新增品項之預估用量,藥品明細,申請分機,目前狀態,申請人/Title,申請人/EMail&$expand=申請人`,
-      { headers: { 'Accept': 'application/json;odata=verbose' }, credentials: 'include' }
-    );
-    const d = await r.json();
-    showLoading(false);
-    return (d.d?.results || []).map(spItemToReq);
-  } catch(e) {
-    showLoading(false);
-    console.error('讀取失敗', e);
-    return [];
-  }
+  return [];
 }
 
 // 將 SharePoint 欄位轉換成原本的 req 格式
@@ -1334,7 +1321,6 @@ async function submitForm() {
   if (!ext) { toast('請填寫分機號碼', 'warn'); return; }
   if (!unit) { toast('請選擇申請單位', 'warn'); return; }
   if (!reasonType) { toast('請選擇申請原因', 'warn'); return; }
-  if (!weekly) { toast('請填寫平均週用量', 'warn'); return; }
 
   const drugs = [];
   let drugEmpty = false;
