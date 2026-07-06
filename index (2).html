@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>假警報測試記錄 | 藥劑部監測系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0E131A;
+    --panel:#161D28;
+    --panel-2:#1C2431;
+    --line:#2A3444;
+    --text:#E8ECF1;
+    --muted:#8B97A8;
+    --red:#E5484D;
+    --amber:#F2A93B;
+    --green:#3ECF8E;
+    --blue:#4C9FE8;
+    --red-dim: rgba(229,72,77,0.14);
+    --amber-dim: rgba(242,169,59,0.14);
+    --green-dim: rgba(62,207,142,0.14);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(76,159,232,0.08), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Noto Sans TC', sans-serif;
+    min-height:100vh;
+    padding:32px 16px 80px;
+  }
+  .wrap{max-width:720px; margin:0 auto;}
+
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px; letter-spacing:.14em; color:var(--blue);
+    text-transform:uppercase; margin-bottom:8px;
+  }
+  h1{
+    font-size:26px; font-weight:900; margin:0 0 6px;
+    letter-spacing:.01em;
+  }
+  .sub{color:var(--muted); font-size:14px; margin-bottom:28px;}
+
+  /* ---- signature element: live alarm light ---- */
+  .light-console{
+    display:flex; align-items:center; gap:18px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px 20px;
+    margin-bottom:24px;
+  }
+  .lamp{
+    width:34px; height:34px; border-radius:50%;
+    background:#333c4a;
+    box-shadow: inset 0 -4px 8px rgba(0,0,0,.4);
+    transition: all .25s ease;
+    flex-shrink:0;
+  }
+  .lamp.red{ background:var(--red); box-shadow:0 0 22px rgba(229,72,77,.65), inset 0 -4px 8px rgba(0,0,0,.3);}
+  .lamp.amber{ background:var(--amber); box-shadow:0 0 22px rgba(242,169,59,.6), inset 0 -4px 8px rgba(0,0,0,.3);}
+  .lamp.green{ background:var(--green); box-shadow:0 0 22px rgba(62,207,142,.6), inset 0 -4px 8px rgba(0,0,0,.3);}
+  .lamp-text{flex:1;}
+  .lamp-text .status{font-weight:700; font-size:15px;}
+  .lamp-text .desc{color:var(--muted); font-size:12.5px; margin-top:2px;}
+
+  form{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:24px;
+  }
+  .section-title{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px; letter-spacing:.12em; color:var(--muted);
+    text-transform:uppercase;
+    margin:28px 0 12px;
+    padding-bottom:8px;
+    border-bottom:1px solid var(--line);
+  }
+  .section-title:first-child{margin-top:0;}
+
+  .row{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  @media(max-width:560px){.row{grid-template-columns:1fr;}}
+
+  label{
+    display:block; font-size:12.5px; color:var(--muted);
+    margin:14px 0 6px; font-weight:500;
+  }
+  input, select, textarea{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    border-radius:8px;
+    padding:10px 12px;
+    font-size:14px;
+    font-family:'Noto Sans TC', sans-serif;
+    outline:none;
+    transition:border-color .15s;
+  }
+  input:focus, select:focus, textarea:focus{border-color:var(--blue);}
+  textarea{resize:vertical; min-height:56px;}
+
+  .result-toggle{display:flex; gap:10px; margin-top:6px;}
+  .result-btn{
+    flex:1; text-align:center; padding:11px 10px; border-radius:8px;
+    border:1px solid var(--line); cursor:pointer; font-size:13.5px; font-weight:600;
+    color:var(--muted); background:var(--panel-2); transition:all .15s;
+  }
+  .result-btn.active-catch{background:var(--green-dim); border-color:var(--green); color:var(--green);}
+  .result-btn.active-miss{background:var(--red-dim); border-color:var(--red); color:var(--red);}
+
+  .submit-btn{
+    width:100%; margin-top:26px; padding:14px; border:none; border-radius:10px;
+    background:var(--blue); color:#0E131A; font-weight:700; font-size:15px;
+    cursor:pointer; font-family:'Noto Sans TC', sans-serif;
+    transition:filter .15s;
+  }
+  .submit-btn:hover{filter:brightness(1.1);}
+  .submit-btn:disabled{opacity:.5; cursor:not-allowed;}
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--panel-2); border:1px solid var(--line);
+    padding:12px 20px; border-radius:10px; font-size:13.5px;
+    opacity:0; transition:all .25s; pointer-events:none;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .toast.ok{border-color:var(--green); color:var(--green);}
+  .toast.err{border-color:var(--red); color:var(--red);}
+
+  .footer-link{
+    text-align:center; margin-top:18px; font-size:12.5px;
+  }
+  .footer-link a{color:var(--blue); text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">藥劑部 · 用藥安全監測</div>
+  <h1>假警報測試記錄</h1>
+  <div class="sub">記錄一筆刻意植入錯誤的測試結果，用來檢核調劑／覆核／發藥各關卡的攔截能力。</div>
+
+  <div class="light-console">
+    <div class="lamp" id="lamp"></div>
+    <div class="lamp-text">
+      <div class="status" id="lampStatus">尚未評估</div>
+      <div class="desc" id="lampDesc">請先選擇測試結果，燈號會自動判定</div>
+    </div>
+  </div>
+
+  <form id="form">
+    <div class="section-title">測試設定</div>
+    <div class="row">
+      <div>
+        <label>日期</label>
+        <input type="date" id="date" required>
+      </div>
+      <div>
+        <label>測試點</label>
+        <select id="testPoint" required>
+          <option value="調劑">調劑</option>
+          <option value="覆核" selected>覆核</option>
+          <option value="發藥">發藥</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>測試處方筆數</label>
+        <input type="number" id="testCount" min="1" required>
+      </div>
+      <div>
+        <label>測試模式</label>
+        <select id="testMode" required>
+          <option value="藥品錯誤">藥品錯誤</option>
+          <option value="數量錯誤">數量錯誤</option>
+          <option value="藥盒錯誤">藥盒錯誤</option>
+          <option value="TOSHO藥包錯誤">TOSHO藥包錯誤</option>
+          <option value="混藥">混藥</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+    </div>
+    <label>錯誤內容說明</label>
+    <textarea id="detail" placeholder="例如：Certican → 罕 Carnitene"></textarea>
+
+    <div class="section-title">測試結果</div>
+    <label style="margin-top:0;">是否被攔截？</label>
+    <div class="result-toggle">
+      <div class="result-btn" id="btnCatch" onclick="setResult(true)">✓ 成功攔截</div>
+      <div class="result-btn" id="btnMiss" onclick="setResult(false)">✕ 未發現錯誤</div>
+    </div>
+    <div class="row">
+      <div>
+        <label>攔截點（未攔截可留空）</label>
+        <select id="interceptPoint">
+          <option value="">－</option>
+          <option value="調劑">調劑</option>
+          <option value="覆核">覆核</option>
+          <option value="發藥">發藥</option>
+        </select>
+      </div>
+      <div>
+        <label>燈號（可手動覆蓋自動判定）</label>
+        <select id="light">
+          <option value="">自動判定</option>
+          <option value="紅燈">紅燈</option>
+          <option value="黃燈">黃燈</option>
+          <option value="綠燈">綠燈</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-title">受測與監測資訊</div>
+    <div class="row">
+      <div>
+        <label>受測院區</label>
+        <select id="campus" required>
+          <option value="">請選擇院區</option>
+          <option value="斗六院區">斗六院區</option>
+          <option value="虎尾院區">虎尾院區</option>
+        </select>
+      </div>
+      <div>
+        <label>受測者</label>
+        <select id="subject" required disabled>
+          <option value="">請先選擇受測院區</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>PGY</label>
+        <select id="pgy">
+          <option value="N" selected>N</option>
+          <option value="Y">Y</option>
+        </select>
+      </div>
+      <div>
+        <label>受測者班別職責</label>
+        <select id="subjectRole" required>
+          <option value="調劑">調劑</option>
+          <option value="覆核" selected>覆核</option>
+          <option value="發藥">發藥</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>受測地點</label>
+        <select id="location">
+          <option value="門診">門診</option>
+          <option value="住診">住診</option>
+        </select>
+      </div>
+      <div>
+        <label>監測者</label>
+        <select id="monitor" required>
+          <option value="">請先選擇受測院區與受測地點</option>
+        </select>
+      </div>
+    </div>
+
+    <button type="submit" class="submit-btn" id="submitBtn">送出記錄</button>
+  </form>
+
+  <div class="footer-link"><a href="dashboard.html">查看儀表板 →</a></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // 部署 Apps Script 後把網址貼在這裡（.../exec）
+  const API_URL = 'https://script.google.com/macros/s/AKfycbyCAsP6G_k1-ysApPQ_yAaAVkRoJBEP3IUvj1pnceAwa5Vw3qB2TM59iOoRrerO_fk/exec';
+
+  // 工作院區名單（來自「工作院區.xlsx」，如有異動請更新這裡）
+  const ROSTER = [
+    { id:'Y00614', name:'鄭佩珊', campus:'斗六院區' },
+    { id:'Y01643', name:'謝姍珊', campus:'斗六院區' },
+    { id:'Y01735', name:'林淑貞', campus:'斗六院區' },
+    { id:'Y02190', name:'張文河', campus:'斗六院區' },
+    { id:'Y03129', name:'楊淑珍', campus:'斗六院區' },
+    { id:'Y04045', name:'彭虹迪', campus:'斗六院區' },
+    { id:'Y04330', name:'魏沛瀅', campus:'斗六院區' },
+    { id:'Y04423', name:'吳坦螢', campus:'斗六院區' },
+    { id:'Y05180', name:'李佩芷', campus:'斗六院區' },
+    { id:'Y05379', name:'李怡萱', campus:'斗六院區' },
+    { id:'Y05474', name:'黃詩婷', campus:'斗六院區' },
+    { id:'Y05490', name:'蔡孟夏', campus:'斗六院區' },
+    { id:'Y06632', name:'沈煒勛', campus:'斗六院區' },
+    { id:'Y07034', name:'葉啟楠', campus:'斗六院區' },
+    { id:'Y07692', name:'林友立', campus:'斗六院區' },
+    { id:'Y07693', name:'洪紹恩', campus:'斗六院區' },
+    { id:'Y07833', name:'廖益樟', campus:'斗六院區' },
+    { id:'Y07944', name:'李心愉', campus:'斗六院區' },
+    { id:'Y08213', name:'林語嫻', campus:'斗六院區' },
+    { id:'Y08733', name:'王鈺婷', campus:'斗六院區' },
+    { id:'Y08855', name:'陳憶萱', campus:'斗六院區' },
+    { id:'Y08868', name:'呂昆羲', campus:'斗六院區' },
+    { id:'Y08994', name:'李昱柔', campus:'斗六院區' },
+    { id:'Y09223', name:'張耿誠', campus:'斗六院區' },
+    { id:'Y09625', name:'陳妍勳', campus:'斗六院區' },
+    { id:'Y09858', name:'李學怡', campus:'斗六院區' },
+    { id:'Y10248', name:'吳岱容', campus:'斗六院區' },
+    { id:'Y10318', name:'施昭瑜', campus:'斗六院區' },
+    { id:'Y01526', name:'劉士宏', campus:'虎尾院區' },
+    { id:'Y01986', name:'林姿佑', campus:'虎尾院區' },
+    { id:'Y02414', name:'黃憶如', campus:'虎尾院區' },
+    { id:'Y04130', name:'魏若蘭', campus:'虎尾院區' },
+    { id:'Y04559', name:'黃昇慧', campus:'虎尾院區' },
+    { id:'Y06271', name:'李凱芸', campus:'虎尾院區' },
+    { id:'Y07620', name:'林亭君', campus:'虎尾院區' },
+    { id:'Y07690', name:'吳采芳', campus:'虎尾院區' },
+    { id:'Y07694', name:'王俞婷', campus:'虎尾院區' },
+    { id:'Y07697', name:'許嘉容', campus:'虎尾院區' },
+    { id:'Y08214', name:'賴嘉淩', campus:'虎尾院區' },
+    { id:'Y08219', name:'陳怡伶', campus:'虎尾院區' },
+    { id:'Y08220', name:'張凱珽', campus:'虎尾院區' },
+    { id:'Y08953', name:'葉宜婷', campus:'虎尾院區' },
+    { id:'Y09383', name:'李奕萱', campus:'虎尾院區' },
+    { id:'Y09773', name:'余映萱', campus:'虎尾院區' },
+    { id:'Y10040', name:'黃亦妡', campus:'虎尾院區' },
+    { id:'Y09139', name:'林虹孜', campus:'虎尾院區' }
+  ];
+
+  function populateSubjects(campus){
+    const sel = document.getElementById('subject');
+    sel.innerHTML = '';
+    const people = ROSTER.filter(p => p.campus === campus);
+    if (!campus){
+      sel.innerHTML = '<option value="">請先選擇受測院區</option>';
+      sel.disabled = true;
+      return;
+    }
+    if (!people.length){
+      sel.innerHTML = '<option value="">此院區尚無名單</option>';
+      sel.disabled = true;
+      return;
+    }
+    sel.innerHTML = '<option value="">請選擇受測者</option>' +
+      people.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+    sel.disabled = false;
+  }
+
+  document.getElementById('campus').addEventListener('change', (e) => {
+    populateSubjects(e.target.value);
+    populateMonitors();
+  });
+
+  // 監測者對照表：依受測院區＋受測地點決定監測者選項
+  const MONITOR_MAP = {
+    '虎尾院區': { '門診': ['陳宜屏'], '住診': ['陳宜屏'] },
+    '斗六院區': { '門診': ['陳麗珺', '王玟璇'], '住診': ['蔡佩玲'] }
+  };
+
+  function populateMonitors(){
+    const campus = document.getElementById('campus').value;
+    const location = document.getElementById('location').value;
+    const sel = document.getElementById('monitor');
+    const options = (MONITOR_MAP[campus] && MONITOR_MAP[campus][location]) || [];
+    if (!campus || !options.length){
+      sel.innerHTML = '<option value="">請先選擇受測院區與受測地點</option>';
+      return;
+    }
+    sel.innerHTML = (options.length > 1 ? '<option value="">請選擇監測者</option>' : '') +
+      options.map(m => `<option value="${m}">${m}</option>`).join('');
+  }
+
+  document.getElementById('location').addEventListener('change', populateMonitors);
+
+  let resultIsCatch = null;
+
+  document.getElementById('date').valueAsDate = new Date();
+
+  function setResult(isCatch){
+    resultIsCatch = isCatch;
+    document.getElementById('btnCatch').classList.toggle('active-catch', isCatch === true);
+    document.getElementById('btnMiss').classList.toggle('active-miss', isCatch === false);
+    updateLamp();
+  }
+
+  function updateLamp(){
+    const lamp = document.getElementById('lamp');
+    const status = document.getElementById('lampStatus');
+    const desc = document.getElementById('lampDesc');
+    const manual = document.getElementById('light').value;
+    const testPoint = document.getElementById('testPoint').value;
+
+    lamp.className = 'lamp';
+
+    let color = null, label = '', d = '';
+
+    if (manual === '紅燈' || manual === '黃燈' || manual === '綠燈'){
+      color = manual === '紅燈' ? 'red' : manual === '黃燈' ? 'amber' : 'green';
+      label = manual + '（手動設定）';
+      d = '此筆記錄使用手動指定的燈號';
+    } else if (resultIsCatch === true){
+      color = 'green'; label = '綠燈 · 攔截成功'; d = '此測試點已成功發現植入的錯誤';
+    } else if (resultIsCatch === false){
+      if (testPoint === '調劑'){
+        color = 'amber'; label = '黃燈 · 調劑未攔截'; d = '調劑關卡未發現錯誤，仍需觀察後續關卡';
+      } else {
+        color = 'red'; label = '紅燈 · 覆核／發藥未攔截'; d = '覆核或發藥關卡未攔截，屬高風險事件';
+      }
+    } else {
+      status.textContent = '尚未評估';
+      desc.textContent = '請先選擇測試結果，燈號會自動判定';
+      return;
+    }
+
+    lamp.classList.add(color);
+    status.textContent = label;
+    desc.textContent = d;
+  }
+
+  document.getElementById('light').addEventListener('change', updateLamp);
+  document.getElementById('testPoint').addEventListener('change', updateLamp);
+
+  function showToast(msg, ok){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + (ok ? 'ok' : 'err');
+    setTimeout(()=> t.className = 'toast', 2500);
+  }
+
+  document.getElementById('form').addEventListener('submit', async function(e){
+    e.preventDefault();
+
+    if (resultIsCatch === null){
+      showToast('請選擇測試結果（是否攔截）', false);
+      return;
+    }
+    if (API_URL === 'YOUR_APPS_SCRIPT_WEB_APP_URL'){
+      showToast('尚未設定 API_URL，請先部署 Apps Script', false);
+      return;
+    }
+
+    const manualLight = document.getElementById('light').value;
+    const testPoint = document.getElementById('testPoint').value;
+    let autoLight = '';
+    if (resultIsCatch === true) autoLight = '綠燈';
+    else autoLight = (testPoint === '調劑') ? '黃燈' : '紅燈';
+
+    const payload = {
+      light: manualLight || autoLight,
+      date: document.getElementById('date').value,
+      testPoint: testPoint,
+      testCount: document.getElementById('testCount').value,
+      testMode: document.getElementById('testMode').value,
+      detail: document.getElementById('detail').value,
+      result: resultIsCatch ? 0 : '未發現錯誤',
+      interceptPoint: document.getElementById('interceptPoint').value,
+      subject: document.getElementById('subject').value,
+      subjectRole: document.getElementById('subjectRole').value,
+      pgy: document.getElementById('pgy').value,
+      location: document.getElementById('location').value,
+      campus: document.getElementById('campus').value,
+      monitor: document.getElementById('monitor').value
+    };
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '送出中...';
+
+    try {
+      await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      showToast('已送出，感謝記錄！', true);
+      document.getElementById('form').reset();
+      document.getElementById('date').valueAsDate = new Date();
+      populateSubjects('');
+      populateMonitors();
+      resultIsCatch = null;
+      document.getElementById('btnCatch').classList.remove('active-catch');
+      document.getElementById('btnMiss').classList.remove('active-miss');
+      updateLamp();
+    } catch(err){
+      showToast('送出失敗，請檢查網路連線', false);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '送出記錄';
+    }
+  });
+</script>
+</body>
+</html>
