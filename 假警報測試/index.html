@@ -382,20 +382,15 @@
     const lamp = document.getElementById('lamp');
     const status = document.getElementById('lampStatus');
     const desc = document.getElementById('lampDesc');
-    const testPoint = document.getElementById('testPoint').value;
 
     lamp.className = 'lamp';
 
     let color = null, label = '', d = '';
 
     if (resultIsCatch === true){
-      color = 'green'; label = '綠燈 · 攔截成功'; d = '此測試點已成功發現植入的錯誤';
+      color = 'green'; label = '綠燈 · 成功攔截'; d = '此測試點已成功發現植入的錯誤';
     } else if (resultIsCatch === false){
-      if (testPoint === '調劑'){
-        color = 'amber'; label = '黃燈 · 調劑未攔截'; d = '調劑關卡未發現錯誤，仍需觀察後續關卡';
-      } else {
-        color = 'red'; label = '紅燈 · 覆核／發藥未攔截'; d = '覆核或發藥關卡未攔截，屬高風險事件';
-      }
+      color = 'red'; label = '紅燈 · 未發現錯誤'; d = '此測試點未能發現植入的錯誤，屬高風險事件';
     } else {
       status.textContent = '尚未評估';
       desc.textContent = '請先選擇測試結果，燈號會自動判定';
@@ -428,15 +423,12 @@
       return;
     }
 
-    const testPoint = document.getElementById('testPoint').value;
-    let autoLight = '';
-    if (resultIsCatch === true) autoLight = '綠燈';
-    else autoLight = (testPoint === '調劑') ? '黃燈' : '紅燈';
+    const autoLight = resultIsCatch ? '綠燈' : '紅燈';
 
     const payload = {
       light: autoLight,
       date: document.getElementById('date').value,
-      testPoint: testPoint,
+      testPoint: document.getElementById('testPoint').value,
       testMode: document.getElementById('testMode').value,
       detail: document.getElementById('detail').value,
       result: resultIsCatch ? 0 : '未發現錯誤',
