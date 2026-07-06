@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>假警報測試儀表板 | 藥劑部監測系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0E131A;
+    --panel:#161D28;
+    --panel-2:#1C2431;
+    --line:#2A3444;
+    --text:#E8ECF1;
+    --muted:#8B97A8;
+    --red:#E5484D;
+    --amber:#F2A93B;
+    --green:#3ECF8E;
+    --blue:#4C9FE8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(76,159,232,0.08), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Noto Sans TC', sans-serif;
+    min-height:100vh;
+    padding:32px 16px 80px;
+  }
+  .wrap{max-width:1080px; margin:0 auto;}
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px; letter-spacing:.14em; color:var(--blue);
+    text-transform:uppercase; margin-bottom:8px;
+  }
+  h1{font-size:26px; font-weight:900; margin:0 0 6px;}
+  .sub{color:var(--muted); font-size:14px; margin-bottom:8px;}
+  .top-row{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:10px; margin-bottom:24px;}
+  .nav-link{font-size:13px;}
+  .nav-link a{color:var(--blue); text-decoration:none;}
+
+  .kpi-grid{
+    display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; margin-bottom:20px;
+  }
+  @media(max-width:800px){.kpi-grid{grid-template-columns:repeat(2,1fr);}}
+  .kpi{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:18px 20px;
+  }
+  .kpi .label{font-size:12px; color:var(--muted); margin-bottom:8px;}
+  .kpi .value{font-family:'IBM Plex Mono', monospace; font-size:28px; font-weight:600;}
+  .kpi.red .value{color:var(--red);}
+  .kpi.green .value{color:var(--green);}
+  .kpi.blue .value{color:var(--blue);}
+
+  .light-bar{
+    display:flex; height:14px; border-radius:8px; overflow:hidden; margin-top:10px;
+    border:1px solid var(--line);
+  }
+  .light-bar div{height:100%;}
+
+  .grid2{display:grid; grid-template-columns:1.4fr 1fr; gap:16px; margin-bottom:16px;}
+  @media(max-width:800px){.grid2{grid-template-columns:1fr;}}
+
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:20px;
+  }
+  .panel h3{
+    font-size:14px; margin:0 0 14px; font-weight:700;
+    display:flex; align-items:center; gap:8px;
+  }
+  .panel h3 .tag{
+    font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--muted);
+    border:1px solid var(--line); border-radius:6px; padding:2px 6px; font-weight:400;
+  }
+  .chart-box{position:relative; height:260px;}
+  .chart-box canvas{max-height:260px;}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th, td{text-align:left; padding:8px 6px; border-bottom:1px solid var(--line);}
+  th{color:var(--muted); font-weight:500; font-family:'IBM Plex Mono', monospace; font-size:11px; text-transform:uppercase; letter-spacing:.05em;}
+  td.num{font-family:'IBM Plex Mono', monospace;}
+  .rate-pill{
+    display:inline-block; padding:2px 8px; border-radius:6px; font-size:12px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .rate-high{background:rgba(62,207,142,.14); color:var(--green);}
+  .rate-mid{background:rgba(242,169,59,.14); color:var(--amber);}
+  .rate-low{background:rgba(229,72,77,.14); color:var(--red);}
+
+  .campus-filter{display:flex;}
+  .campus-btn{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; padding:7px 14px;
+    border-radius:8px; border:1px solid var(--line); background:var(--panel);
+    color:var(--muted); cursor:pointer; transition:all .15s;
+  }
+  .campus-btn.active{border-color:var(--blue); color:var(--blue); background:rgba(76,159,232,.1);}
+
+  .empty, .loading{
+    text-align:center; color:var(--muted); padding:60px 20px; font-size:14px;
+  }
+  .empty code{
+    background:var(--panel-2); padding:2px 6px; border-radius:4px; font-family:'IBM Plex Mono', monospace;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top-row">
+    <div>
+      <div class="eyebrow">藥劑部 · 用藥安全監測</div>
+      <h1>假警報測試儀表板</h1>
+      <div class="sub">彙整所有測試記錄，追蹤各關卡攔截能力與趨勢</div>
+    </div>
+    <div class="nav-link"><a href="index.html">＋ 新增測試記錄</a></div>
+  </div>
+
+  <div class="campus-filter" id="campusFilter" style="display:none; margin-bottom:18px; gap:8px;"></div>
+
+  <div id="content">
+    <div class="loading">載入資料中...</div>
+  </div>
+</div>
+
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycby6oiFmtn_TUtTGiEqKd7bPXQQlQahF10iuSLLNBKVsODJbmo7zQW61eUuLpHt56Htu/exec';
+  const COLORS = { red:'#E5484D', amber:'#F2A93B', green:'#3ECF8E', blue:'#4C9FE8', muted:'#8B97A8' };
+
+  function isCaught(row){
+    const r = row['測試結果'];
+    return r === 0 || r === '0';
+  }
+
+  function monthKey(dateStr){
+    if (!dateStr) return '未知';
+    return String(dateStr).slice(0,7);
+  }
+
+  function rateClass(rate){
+    if (rate >= 80) return 'rate-high';
+    if (rate >= 50) return 'rate-mid';
+    return 'rate-low';
+  }
+
+  async function load(){
+    if (API_URL === 'YOUR_APPS_SCRIPT_WEB_APP_URL'){
+      document.getElementById('content').innerHTML =
+        '<div class="empty">尚未設定 API_URL<br><br>請先部署 Google Apps Script，並把網址貼到 <code>dashboard.html</code> 與 <code>index.html</code> 裡的 <code>API_URL</code></div>';
+      return;
+    }
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      allRows = data.rows || [];
+      setupCampusFilter(allRows);
+      render(filterByCampus(allRows));
+    } catch(err){
+      document.getElementById('content').innerHTML =
+        '<div class="empty">資料載入失敗，請確認 Apps Script 已正確部署且可公開存取</div>';
+    }
+  }
+
+  let allRows = [];
+  let activeCampus = '全部';
+
+  function filterByCampus(rows){
+    if (activeCampus === '全部') return rows;
+    return rows.filter(r => r['受測院區'] === activeCampus);
+  }
+
+  function setupCampusFilter(rows){
+    const campuses = [...new Set(rows.map(r => r['受測院區']).filter(Boolean))];
+    if (!campuses.length) return;
+    const wrap = document.getElementById('campusFilter');
+    wrap.style.display = 'flex';
+    const options = ['全部', ...campuses];
+    wrap.innerHTML = options.map(c =>
+      `<button class="campus-btn ${c===activeCampus?'active':''}" data-campus="${c}">${c}</button>`
+    ).join('');
+    wrap.querySelectorAll('.campus-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeCampus = btn.dataset.campus;
+        wrap.querySelectorAll('.campus-btn').forEach(b => b.classList.toggle('active', b === btn));
+        render(filterByCampus(allRows));
+      });
+    });
+  }
+
+  function render(rows){
+    if (!rows.length){
+      document.getElementById('content').innerHTML = '<div class="empty">目前還沒有測試記錄，快去新增第一筆吧</div>';
+      return;
+    }
+
+    document.getElementById('content').innerHTML = `
+      <div class="kpi-grid">
+        <div class="kpi blue"><div class="label">總測試筆數</div><div class="value" id="kpiTotal">-</div></div>
+        <div class="kpi green"><div class="label">整體攔截率</div><div class="value" id="kpiRate">-</div></div>
+        <div class="kpi red"><div class="label">紅燈事件</div><div class="value" id="kpiRed">-</div></div>
+        <div class="kpi green"><div class="label">綠燈事件</div><div class="value" id="kpiGreen">-</div></div>
+      </div>
+      <div class="panel" style="margin-bottom:16px;">
+        <h3>燈號分布 <span class="tag">LIGHT STATUS</span></h3>
+        <div class="light-bar" id="lightBar"></div>
+        <div id="lightLegend" style="margin-top:10px; font-size:12px; color:var(--muted); display:flex; gap:16px;"></div>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <h3>月度趨勢：測試筆數與攔截率 <span class="tag">TREND</span></h3>
+          <div class="chart-box"><canvas id="trendChart"></canvas></div>
+        </div>
+        <div class="panel">
+          <h3>測試模式分布 <span class="tag">BY TYPE</span></h3>
+          <div class="chart-box"><canvas id="modeChart"></canvas></div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <h3>受測者攔截表現 <span class="tag">BY SUBJECT</span></h3>
+          <div class="chart-box"><canvas id="subjectChart"></canvas></div>
+        </div>
+        <div class="panel">
+          <h3>受測院區比例 <span class="tag">SEGMENT</span></h3>
+          <div class="chart-box"><canvas id="segChart"></canvas></div>
+        </div>
+      </div>
+    `;
+
+    const total = rows.length;
+    const caughtCount = rows.filter(isCaught).length;
+    const overallRate = Math.round((caughtCount/total)*100);
+    const greenCount = caughtCount;
+    const redCount = total - greenCount;
+
+    document.getElementById('kpiTotal').textContent = total;
+    document.getElementById('kpiRate').textContent = overallRate + '%';
+    document.getElementById('kpiRed').textContent = redCount;
+    document.getElementById('kpiGreen').textContent = greenCount;
+
+    const bar = document.getElementById('lightBar');
+    [['red', redCount], ['green', greenCount]].forEach(([c, n])=>{
+      if (n <= 0) return;
+      const seg = document.createElement('div');
+      seg.style.width = (n/total*100) + '%';
+      seg.style.background = COLORS[c];
+      bar.appendChild(seg);
+    });
+    document.getElementById('lightLegend').innerHTML = `
+      <span>🔴 紅燈 ${redCount}</span><span>🟢 綠燈 ${greenCount}</span>
+    `;
+
+    // 月度趨勢
+    const byMonth = {};
+    rows.forEach(r => {
+      const m = monthKey(r['日期']);
+      if (!byMonth[m]) byMonth[m] = { total:0, caught:0 };
+      byMonth[m].total++;
+      if (isCaught(r)) byMonth[m].caught++;
+    });
+    const months = Object.keys(byMonth).sort();
+    new Chart(document.getElementById('trendChart'), {
+      data: {
+        labels: months,
+        datasets: [
+          { type:'bar', label:'測試筆數', data: months.map(m=>byMonth[m].total), backgroundColor: COLORS.blue + '55', borderRadius:4, yAxisID:'y' },
+          { type:'line', label:'攔截率 %', data: months.map(m=>Math.round(byMonth[m].caught/byMonth[m].total*100)), borderColor: COLORS.green, backgroundColor: COLORS.green, tension:.3, yAxisID:'y1' }
+        ]
+      },
+      options: chartBaseOptions({
+        y: { position:'left', ticks:{color:COLORS.muted}, grid:{color:'#2A3444'} },
+        y1:{ position:'right', min:0, max:100, ticks:{color:COLORS.muted}, grid:{drawOnChartArea:false} }
+      })
+    });
+
+    // 測試模式分布
+    const byMode = {};
+    rows.forEach(r => { const m = r['測試模式'] || '其他'; byMode[m] = (byMode[m]||0)+1; });
+    const modes = Object.keys(byMode).sort((a,b)=>byMode[b]-byMode[a]);
+    new Chart(document.getElementById('modeChart'), {
+      type:'bar',
+      data: { labels: modes, datasets:[{ data: modes.map(m=>byMode[m]), backgroundColor: COLORS.blue, borderRadius:4 }] },
+      options: chartBaseOptions({ y:{ ticks:{color:COLORS.muted}, grid:{color:'#2A3444'} } }, true)
+    });
+
+    // 受測者攔截表現：受測者（X軸）測試次數（Y軸）
+    const bySubject = {};
+    rows.forEach(r => {
+      const s = r['受測者'] || '未知';
+      bySubject[s] = (bySubject[s] || 0) + 1;
+    });
+    const subjects = Object.keys(bySubject).sort((a,b)=>bySubject[b]-bySubject[a]);
+    new Chart(document.getElementById('subjectChart'), {
+      type:'bar',
+      data: { labels: subjects, datasets:[{ label:'測試次數', data: subjects.map(s=>bySubject[s]), backgroundColor: COLORS.blue, borderRadius:4 }] },
+      options: chartBaseOptions({ y:{ ticks:{color:COLORS.muted, precision:0}, grid:{color:'#2A3444'} } }, true)
+    });
+
+    // 受測院區比例：斗六/虎尾 圓餅圖
+    const byCampus = {};
+    rows.forEach(r => {
+      const c = r['受測院區'] || '未知';
+      byCampus[c] = (byCampus[c] || 0) + 1;
+    });
+    const campusLabels = Object.keys(byCampus);
+    new Chart(document.getElementById('segChart'), {
+      type:'pie',
+      data: {
+        labels: campusLabels,
+        datasets: [{ data: campusLabels.map(c=>byCampus[c]), backgroundColor: [COLORS.blue, COLORS.green, COLORS.red, COLORS.amber] }]
+      },
+      options: {
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{ legend:{ display:true, position:'bottom', labels:{ color:'#E8ECF1', font:{ family:"'Noto Sans TC'" } } } }
+      }
+    });
+  }
+
+  function chartBaseOptions(scalesExtra, hideLegend){
+    return {
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{ display: !hideLegend, labels:{ color:'#E8ECF1', font:{ family:"'Noto Sans TC'" } } }
+      },
+      scales: Object.assign({
+        x: { ticks:{ color:'#8B97A8' }, grid:{ display:false } }
+      }, scalesExtra)
+    };
+  }
+
+  load();
+</script>
+</body>
+</html>
