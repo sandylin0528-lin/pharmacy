@@ -309,7 +309,7 @@
     new Chart(document.getElementById('modeChart'), {
       type:'bar',
       data: { labels: modes, datasets:[{ data: modes.map(m=>byMode[m]), backgroundColor: COLORS.blue, borderRadius:4 }] },
-      options: chartBaseOptions({ y:{ ticks:{color:COLORS.muted}, grid:{color:'#2A3444'} } }, true)
+      options: chartBaseOptions({ y:{ ticks:{color:COLORS.muted, precision:0, stepSize:1}, grid:{color:'#2A3444'} } }, true)
     });
 
     // 受測者攔截表現：受測者（X軸）測試次數（Y軸）
@@ -322,27 +322,54 @@
     new Chart(document.getElementById('subjectChart'), {
       type:'bar',
       data: { labels: subjects, datasets:[{ label:'測試次數', data: subjects.map(s=>bySubject[s]), backgroundColor: COLORS.blue, borderRadius:4 }] },
-      options: chartBaseOptions({ y:{ ticks:{color:COLORS.muted, precision:0}, grid:{color:'#2A3444'} } }, true)
+      options: chartBaseOptions({ y:{ ticks:{color:COLORS.muted, precision:0, stepSize:1}, grid:{color:'#2A3444'} } }, true)
     });
 
-    // 受測院區比例：斗六/虎尾 圓餅圖
+    // 受測院區比例：斗六/虎尾 圓餅圖（顯示數量與百分比）
     const byCampus = {};
     rows.forEach(r => {
       const c = r['受測院區'] || '未知';
       byCampus[c] = (byCampus[c] || 0) + 1;
     });
     const campusLabels = Object.keys(byCampus);
+    const campusValues = campusLabels.map(c=>byCampus[c]);
+    const campusTotal = campusValues.reduce((a,b)=>a+b, 0);
+
+    const percentLabelsPlugin = {
+      id: 'percentLabels',
+      afterDatasetsDraw(chart){
+        const { ctx } = chart;
+        chart.getDatasetMeta(0).data.forEach((arc, i) => {
+          const value = chart.data.datasets[0].data[i];
+          if (!value) return;
+          const percent = Math.round(value / campusTotal * 100);
+          const props = arc.getProps(['x','y','startAngle','endAngle','outerRadius'], true);
+          const mid = (props.startAngle + props.endAngle) / 2;
+          const rx = props.x + Math.cos(mid) * props.outerRadius * 0.62;
+          const ry = props.y + Math.sin(mid) * props.outerRadius * 0.62;
+          ctx.save();
+          ctx.fillStyle = '#0E131A';
+          ctx.font = 'bold 13px "Noto Sans TC", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`${value} (${percent}%)`, rx, ry);
+          ctx.restore();
+        });
+      }
+    };
+
     new Chart(document.getElementById('segChart'), {
       type:'pie',
       data: {
         labels: campusLabels,
-        datasets: [{ data: campusLabels.map(c=>byCampus[c]), backgroundColor: [COLORS.blue, COLORS.green, COLORS.red, COLORS.amber] }]
+        datasets: [{ data: campusValues, backgroundColor: [COLORS.blue, COLORS.green, COLORS.red, COLORS.amber] }]
       },
       options: {
         responsive:true,
         maintainAspectRatio:false,
         plugins:{ legend:{ display:true, position:'bottom', labels:{ color:'#E8ECF1', font:{ family:"'Noto Sans TC'" } } } }
-      }
+      },
+      plugins: [percentLabelsPlugin]
     });
   }
 
