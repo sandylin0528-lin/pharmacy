@@ -179,6 +179,7 @@
       const res = await fetch(API_URL);
       const data = await res.json();
       allRows = data.rows || [];
+      allRoster = data.roster || [];
       setupCampusFilter(allRows);
       render(filterByCampus(allRows));
     } catch(err){
@@ -192,6 +193,7 @@
   }
 
   let allRows = [];
+  let allRoster = [];
   let activeCampus = '全部';
 
   function filterByCampus(rows){
@@ -251,8 +253,33 @@
           <div class="chart-box"><canvas id="subjectChart"></canvas></div>
         </div>
         <div class="panel">
-          <h3>受測院區比例 <span class="tag">SEGMENT</span></h3>
+          <h3>人員測試涵蓋比例 <span class="tag">COVERAGE</span></h3>
           <div class="chart-box"><canvas id="segChart"></canvas></div>
+        </div>
+      </div>
+      <div class="panel" style="margin-bottom:16px;">
+        <h3>人員測試覆蓋率 <span class="tag">COVERAGE</span></h3>
+        <div style="font-size:12px; color:var(--muted); margin-bottom:10px;">列出名單中所有人員，紅色代表目前尚未被測試過</div>
+        <table><thead><tr><th>受測者</th><th>院區</th><th>測試次數</th></tr></thead>
+          <tbody id="coverageBody"></tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+          <h3 style="margin:0;">明細資料表 <span class="tag">DETAIL</span></h3>
+          <div style="display:flex; gap:8px;">
+            <input id="detailSearch" placeholder="搜尋受測者／測試模式／錯誤內容..." style="background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:8px 12px; font-size:13px; width:220px;">
+            <button class="campus-btn" id="exportCsvBtn">⬇ 匯出 CSV</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th>日期</th><th>燈號</th><th>測試點</th><th>測試模式</th><th>錯誤內容</th>
+            <th>結果</th><th>攔截點</th><th>受測院區</th><th>受測者</th><th>監測者</th>
+          </tr></thead>
+          <tbody id="detailBody"></tbody>
+        </table>
         </div>
       </div>
     `;
@@ -313,28 +340,41 @@
       options: chartBaseOptions({ y:{ ticks:{color:COLORS.muted, precision:0, stepSize:1}, grid:{color:'#2A3444'} } }, true)
     });
 
-    // 受測者攔截表現：受測者（X軸）測試次數（Y軸）
+    // 受測者攔截表現：受測者（X軸）依攔截成功(綠)/未發現錯誤(紅)堆疊
     const bySubject = {};
     rows.forEach(r => {
       const s = r['受測者'] || '未知';
-      bySubject[s] = (bySubject[s] || 0) + 1;
+      if (!bySubject[s]) bySubject[s] = { caught:0, missed:0 };
+      if (isCaught(r)) bySubject[s].caught++; else bySubject[s].missed++;
     });
-    const subjects = Object.keys(bySubject).sort((a,b)=>bySubject[b]-bySubject[a]);
+    const subjects = Object.keys(bySubject).sort((a,b) =>
+      (bySubject[b].caught+bySubject[b].missed) - (bySubject[a].caught+bySubject[a].missed)
+    );
     new Chart(document.getElementById('subjectChart'), {
       type:'bar',
-      data: { labels: subjects, datasets:[{ label:'測試次數', data: subjects.map(s=>bySubject[s]), backgroundColor: COLORS.blue, borderRadius:4 }] },
-      options: chartBaseOptions({ y:{ ticks:{color:COLORS.muted, precision:0, stepSize:1}, grid:{color:'#2A3444'} } }, true)
+      data: {
+        labels: subjects,
+        datasets:[
+          { label:'攔截成功', data: subjects.map(s=>bySubject[s].caught), backgroundColor: COLORS.green, borderRadius:4, stack:'s' },
+          { label:'未發現錯誤', data: subjects.map(s=>bySubject[s].missed), backgroundColor: COLORS.red, borderRadius:4, stack:'s' }
+        ]
+      },
+      options: chartBaseOptions({
+        x: { stacked:true, ticks:{ color:'#8B97A8' }, grid:{ display:false } },
+        y: { stacked:true, ticks:{color:COLORS.muted, precision:0, stepSize:1}, grid:{color:'#2A3444'} }
+      })
     });
 
-    // 受測院區比例：斗六/虎尾 圓餅圖（顯示數量與百分比）
-    const byCampus = {};
-    rows.forEach(r => {
-      const c = r['受測院區'] || '未知';
-      byCampus[c] = (byCampus[c] || 0) + 1;
-    });
-    const campusLabels = Object.keys(byCampus);
-    const campusValues = campusLabels.map(c=>byCampus[c]);
-    const campusTotal = campusValues.reduce((a,b)=>a+b, 0);
+    // 人員測試涵蓋比例：名單中已被測過 vs 尚未測過 的人數（圓餅圖）
+    const testedNames = new Set(rows.map(r => r['受測者']).filter(Boolean));
+    const rosterForPie = allRoster.filter(p => activeCampus === '全部' || p.campus === activeCampus);
+    const basisNames = rosterForPie.length ? rosterForPie.map(p => p.name) : [...testedNames];
+    const testedCount = basisNames.filter(n => testedNames.has(n)).length;
+    const untestedCount = basisNames.length - testedCount;
+
+    const coverageLabels = ['已測', '未測'];
+    const coverageValues = [testedCount, untestedCount];
+    const coverageTotal = testedCount + untestedCount;
 
     const percentLabelsPlugin = {
       id: 'percentLabels',
@@ -343,7 +383,7 @@
         chart.getDatasetMeta(0).data.forEach((arc, i) => {
           const value = chart.data.datasets[0].data[i];
           if (!value) return;
-          const percent = Math.round(value / campusTotal * 100);
+          const percent = Math.round(value / coverageTotal * 100);
           const props = arc.getProps(['x','y','startAngle','endAngle','outerRadius'], true);
           const mid = (props.startAngle + props.endAngle) / 2;
           const rx = props.x + Math.cos(mid) * props.outerRadius * 0.62;
@@ -362,8 +402,8 @@
     new Chart(document.getElementById('segChart'), {
       type:'pie',
       data: {
-        labels: campusLabels,
-        datasets: [{ data: campusValues, backgroundColor: [COLORS.blue, COLORS.green, COLORS.red, COLORS.amber] }]
+        labels: coverageLabels,
+        datasets: [{ data: coverageValues, backgroundColor: [COLORS.green, COLORS.red] }]
       },
       options: {
         responsive:true,
@@ -371,6 +411,75 @@
         plugins:{ legend:{ display:true, position:'bottom', labels:{ color:'#E8ECF1', font:{ family:"'Noto Sans TC'" } } } }
       },
       plugins: [percentLabelsPlugin]
+    });
+
+    // 人員測試覆蓋率：名單中每個人測了幾次，0 次的標紅並排最前面
+    const testCountByName = {};
+    rows.forEach(r => {
+      const s = r['受測者'] || '';
+      if (!s) return;
+      testCountByName[s] = (testCountByName[s] || 0) + 1;
+    });
+    const rosterForCoverage = allRoster.filter(p => activeCampus === '全部' || p.campus === activeCampus);
+    const coverageList = (rosterForCoverage.length ? rosterForCoverage : Object.keys(testCountByName).map(n=>({name:n, campus:''})))
+      .map(p => ({ name: p.name, campus: p.campus, count: testCountByName[p.name] || 0 }))
+      .sort((a,b) => a.count - b.count || a.name.localeCompare(b.name));
+    const coverageBody = document.getElementById('coverageBody');
+    coverageBody.innerHTML = coverageList.map(p => `
+      <tr>
+        <td style="${p.count===0 ? 'color:var(--red); font-weight:700;' : ''}">${p.name}${p.count===0 ? '　⚠ 尚未測試' : ''}</td>
+        <td>${p.campus || '-'}</td>
+        <td class="num">${p.count}</td>
+      </tr>
+    `).join('');
+
+    // 明細資料表（支援關鍵字搜尋、匯出 CSV）
+    const detailColumns = ['日期','燈號','測試點','測試模式','錯誤內容','測試結果','攔截點','受測院區','受測者','監測者'];
+    function renderDetailTable(keyword){
+      const kw = (keyword || '').trim().toLowerCase();
+      const filtered = !kw ? rows : rows.filter(r =>
+        detailColumns.some(c => String(r[c] || '').toLowerCase().includes(kw))
+      );
+      const sorted = [...filtered].sort((a,b) => String(b['日期']||'').localeCompare(String(a['日期']||'')));
+      const tbody = document.getElementById('detailBody');
+      tbody.innerHTML = sorted.map(r => `
+        <tr>
+          <td>${r['日期']||''}</td>
+          <td>${r['燈號']||''}</td>
+          <td>${r['測試點']||''}</td>
+          <td>${r['測試模式']||''}</td>
+          <td>${r['錯誤內容']||''}</td>
+          <td>${isCaught(r) ? '<span class="rate-pill rate-high">攔截成功</span>' : '<span class="rate-pill rate-low">未發現錯誤</span>'}</td>
+          <td>${r['攔截點']||'-'}</td>
+          <td>${r['受測院區']||''}</td>
+          <td>${r['受測者']||''}</td>
+          <td>${r['監測者']||''}</td>
+        </tr>
+      `).join('');
+      return sorted;
+    }
+    let currentDetailRows = renderDetailTable('');
+
+    document.getElementById('detailSearch').addEventListener('input', (e) => {
+      currentDetailRows = renderDetailTable(e.target.value);
+    });
+
+    document.getElementById('exportCsvBtn').addEventListener('click', () => {
+      const header = detailColumns.join(',');
+      const csvRows = currentDetailRows.map(r =>
+        detailColumns.map(c => {
+          let v = String(r[c] ?? '').replace(/"/g, '""');
+          return /[",\n]/.test(v) ? `"${v}"` : v;
+        }).join(',')
+      );
+      const csv = '\uFEFF' + [header, ...csvRows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `假警報測試記錄_${activeCampus}_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
     });
   }
 

@@ -188,7 +188,8 @@
       </div>
     </div>
     <label>錯誤內容說明</label>
-    <textarea id="detail" placeholder="例如：Certican → 罕 Carnitene"></textarea>
+    <input type="text" id="detail" list="mistakeList" placeholder="例如：Certican → 罕 Carnitene">
+    <datalist id="mistakeList"></datalist>
 
     <div class="section-title">測試結果</div>
     <div class="row">
@@ -272,8 +273,8 @@
   // 部署 Apps Script 後把網址貼在這裡（.../exec）
   const API_URL = 'https://script.google.com/macros/s/AKfycby6oiFmtn_TUtTGiEqKd7bPXQQlQahF10iuSLLNBKVsODJbmo7zQW61eUuLpHt56Htu/exec';
 
-  // 工作院區名單（來自「工作院區.xlsx」，如有異動請更新這裡）
-  const ROSTER = [
+  // 工作院區名單（預設備用名單；頁面載入後會嘗試從 Google Sheet「人員名單」分頁抓最新資料覆蓋）
+  let ROSTER = [
     { id:'Y00614', name:'鄭佩珊', campus:'斗六院區' },
     { id:'Y01643', name:'謝姍珊', campus:'斗六院區' },
     { id:'Y01735', name:'林淑貞', campus:'斗六院區' },
@@ -346,11 +347,48 @@
     populateMonitors();
   });
 
-  // 監測者對照表：依受測院區＋受測地點決定監測者選項
-  const MONITOR_MAP = {
+  // 監測者對照表（預設備用資料；頁面載入後會嘗試從 Google Sheet「監測者名單」分頁抓最新資料覆蓋）
+  let MONITOR_MAP = {
     '虎尾院區': { '門診': ['陳宜屏'], '住診': ['陳宜屏'] },
     '斗六院區': { '門診': ['陳麗珺', '王玟璇'], '住診': ['蔡佩玲', '李哲安'] }
   };
+
+  function buildMonitorMap(monitorRows){
+    const map = {};
+    monitorRows.forEach(r => {
+      if (!r.campus || !r.group || !r.monitor) return;
+      map[r.campus] = map[r.campus] || {};
+      map[r.campus][r.group] = map[r.campus][r.group] || [];
+      if (!map[r.campus][r.group].includes(r.monitor)) {
+        map[r.campus][r.group].push(r.monitor);
+      }
+    });
+    return map;
+  }
+
+  // 頁面載入時嘗試從 Google Sheet 的「人員名單」「監測者名單」分頁抓最新資料，
+  // 抓不到就沿用上面寫死的備用資料，不影響表單使用
+  (async function loadDataFromSheet(){
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      if (data.roster && data.roster.length){
+        ROSTER = data.roster;
+        const currentCampus = document.getElementById('campus').value;
+        if (currentCampus) populateSubjects(currentCampus);
+      }
+      if (data.monitors && data.monitors.length){
+        MONITOR_MAP = buildMonitorMap(data.monitors);
+        populateMonitors();
+      }
+      if (data.mistakes && data.mistakes.length){
+        const dl = document.getElementById('mistakeList');
+        dl.innerHTML = data.mistakes.map(m => `<option value="${m}"></option>`).join('');
+      }
+    } catch(err){
+      // 讀取失敗就沿用備用名單，不影響表單使用
+    }
+  })();
 
   function populateMonitors(){
     const campus = document.getElementById('campus').value;
