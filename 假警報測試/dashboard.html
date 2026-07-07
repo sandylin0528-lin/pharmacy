@@ -158,9 +158,20 @@
     return r === 0 || r === '0';
   }
 
+  function fmtDate(v){
+    if (!v) return '';
+    try {
+      const d = new Date(v);
+      if (isNaN(d.getTime())) return String(v);
+      return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+    } catch(e){
+      return String(v);
+    }
+  }
+
   function monthKey(dateStr){
-    if (!dateStr) return '未知';
-    return String(dateStr).slice(0,7);
+    const d = fmtDate(dateStr);
+    return d ? d.slice(0,7) : '未知';
   }
 
   function rateClass(rate){
@@ -355,7 +366,7 @@
       data: {
         labels: subjects,
         datasets:[
-          { label:'攔截成功', data: subjects.map(s=>bySubject[s].caught), backgroundColor: COLORS.green, borderRadius:4, stack:'s' },
+          { label:'成功攔截', data: subjects.map(s=>bySubject[s].caught), backgroundColor: COLORS.green, borderRadius:4, stack:'s' },
           { label:'未發現錯誤', data: subjects.map(s=>bySubject[s].missed), backgroundColor: COLORS.red, borderRadius:4, stack:'s' }
         ]
       },
@@ -444,12 +455,12 @@
       const tbody = document.getElementById('detailBody');
       tbody.innerHTML = sorted.map(r => `
         <tr>
-          <td>${r['日期']||''}</td>
+          <td>${fmtDate(r['日期'])}</td>
           <td>${r['燈號']||''}</td>
           <td>${r['測試點']||''}</td>
           <td>${r['測試模式']||''}</td>
           <td>${r['錯誤內容']||''}</td>
-          <td>${isCaught(r) ? '<span class="rate-pill rate-high">攔截成功</span>' : '<span class="rate-pill rate-low">未發現錯誤</span>'}</td>
+          <td>${isCaught(r) ? '<span class="rate-pill rate-high">成功攔截</span>' : '<span class="rate-pill rate-low">未發現錯誤</span>'}</td>
           <td>${r['攔截點']||'-'}</td>
           <td>${r['受測院區']||''}</td>
           <td>${r['受測者']||''}</td>
