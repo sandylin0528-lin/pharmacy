@@ -125,7 +125,7 @@ td.rem-zero{color:#8b1a1a}
   <div class="top-bar">
     <div>
       <div class="top-title">透析液庫存管理</div>
-      <div class="top-sub">台大雲林分院　藥劑部</div>
+      <div class="top-sub">台大雲林分院　藥劑部　<span id="sync-status" style="color:#6b8a9e">● 連線中…</span></div>
     </div>
     <div class="btn-row">
       <button class="btn" onclick="showTab('settings')">⚙ 安全庫存</button>
@@ -544,7 +544,13 @@ function exportCSV(){
 function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2000);
+  setTimeout(()=>t.classList.remove('show'),2500);
+  const ss=document.getElementById('sync-status');
+  if(ss){
+    if(msg.includes('✓'))      {ss.textContent='● 已同步 Sheets';ss.style.color='#1a6b3a';}
+    else if(msg.includes('⚠')) {ss.textContent='● 離線（本機備份）';ss.style.color='#9a6800';}
+    else if(msg.includes('⏳')){ss.textContent='● 連線中…';ss.style.color='#6b8a9e';}
+  }
 }
 function showTab(tab){
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
@@ -560,12 +566,32 @@ function showTab(tab){
     document.getElementById('pane-settings').classList.add('active');
   }
 }
-function saveAll(){
+const GAS_URL='https://script.google.com/macros/s/AKfycbwbMrHgCHshcX6P202wgrzDghIPvHl26y1NUA8caust5BigXvJnRcdOkwPDRsffUUYkag/exec';
+
+async function saveAll(){
+  const btn=document.getElementById('savebtn');
+  if(btn)btn.innerHTML='<i class="ti ti-loader" aria-hidden="true"></i> 儲存中…';
   try{
-    localStorage.setItem('dialysis_v4',JSON.stringify({state,safeStock,logs}));
-    showToast('✓ 儲存成功');
-  }catch(e){showToast('儲存失敗');}
+    const res=await fetch(GAS_URL,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'save',state,safeStock,logs})
+    });
+    const json=await res.json();
+    if(json.ok){
+      showToast('✓ 已同步至 Google Sheets');
+      if(btn)btn.innerHTML='<i class="ti ti-check" aria-hidden="true"></i> 已儲存';
+      setTimeout(()=>{if(btn)btn.innerHTML='<i class="ti ti-device-floppy" aria-hidden="true"></i> 儲存';},2000);
+    }else{
+      throw new Error(json.error||'unknown');
+    }
+  }catch(e){
+    showToast('⚠ 同步失敗，已備存本機：'+e.message);
+    localStorage.setItem('dialysis_backup',JSON.stringify({state,safeStock,logs}));
+    if(btn)btn.innerHTML='<i class="ti ti-device-floppy" aria-hidden="true"></i> 儲存';
+  }
 }
+
 function patchOldLogs(){
   logs.forEach(l=>{
     if(!l.msg)return;
@@ -574,26 +600,42 @@ function patchOldLogs(){
     l.transferDir=l.campus==='斗六'?'d2h':l.campus==='虎尾'?'h2d':l.transferDir;
   });
 }
-function init(){
-  try{
-    const r=localStorage.getItem('dialysis_v4');
-    if(!r)return;
-    const p=JSON.parse(r);
-    if(p.state)['douniu','huwei'].forEach(c=>{
-      if(p.state[c])ALL.forEach(i=>{if(p.state[c][i.code])state[c][i.code]={...defItem(),...p.state[c][i.code]};});
-    });
-    if(p.safeStock){
-      const isOldFlat=!('douniu' in p.safeStock)&&!('huwei' in p.safeStock);
-      if(isOldFlat){
-        // 舊版是扁平結構 {code:value}，視為兩院區共用同一上限做初始轉移
-        safeStock={douniu:{...p.safeStock},huwei:{...p.safeStock}};
-      }else{
-        safeStock={douniu:{...(p.safeStock.douniu||{})},huwei:{...(p.safeStock.huwei||{})}};
-      }
+
+function applyLoaded(p){
+  if(p.state)['douniu','huwei'].forEach(c=>{
+    if(p.state[c])ALL.forEach(i=>{if(p.state[c][i.code])state[c][i.code]={...defItem(),...p.state[c][i.code]};});
+  });
+  if(p.safeStock){
+    const isOldFlat=!('douniu' in p.safeStock)&&!('huwei' in p.safeStock);
+    if(isOldFlat){
+      safeStock={douniu:{...p.safeStock},huwei:{...p.safeStock}};
+    }else{
+      safeStock={douniu:{...(p.safeStock.douniu||{})},huwei:{...(p.safeStock.huwei||{})}};
     }
-    if(p.logs)logs=p.logs;
-    patchOldLogs();
-  }catch(e){}
+  }
+  if(p.logs)logs=p.logs;
+  patchOldLogs();
+}
+
+async function init(){
+  showToast('⏳ 載入中…');
+  try{
+    const res=await fetch(GAS_URL+'?action=load');
+    const json=await res.json();
+    if(json.ok){
+      applyLoaded(json);
+      showToast('✓ 已從 Google Sheets 載入');
+    }else{
+      throw new Error(json.error||'unknown');
+    }
+  }catch(e){
+    // 載入失敗時退回本機備份
+    try{
+      const backup=localStorage.getItem('dialysis_backup');
+      if(backup)applyLoaded(JSON.parse(backup));
+      showToast('⚠ 無法連線，使用本機備份資料');
+    }catch(e2){}
+  }
   showTab('douniu');
 }
 init();
