@@ -188,7 +188,7 @@
       </div>
     </div>
     <label>錯誤內容說明</label>
-    <input type="text" id="detail" list="mistakeList" placeholder="例如：Certican → 罕 Carnitene">
+    <input type="text" id="detail" list="mistakeList" placeholder="例如：Certican → 罕 Carnitene" required>
     <datalist id="mistakeList"></datalist>
 
     <div class="section-title">測試結果</div>
@@ -201,9 +201,9 @@
         </div>
       </div>
       <div>
-        <label style="margin-top:0;">攔截點（未攔截可留空）</label>
-        <select id="interceptPoint">
-          <option value="">－</option>
+        <label style="margin-top:0;">攔截點（未攔截選「－」）</label>
+        <select id="interceptPoint" required>
+          <option value="－">－</option>
           <option value="調劑">調劑</option>
           <option value="覆核">覆核</option>
           <option value="發藥">發藥</option>
@@ -231,7 +231,7 @@
     <div class="row">
       <div>
         <label>PGY</label>
-        <select id="pgy">
+        <select id="pgy" required>
           <option value="N" selected>N</option>
           <option value="Y">Y</option>
         </select>
@@ -248,7 +248,7 @@
     <div class="row">
       <div>
         <label>受測地點</label>
-        <select id="location">
+        <select id="location" required>
           <option value="門診">門診</option>
           <option value="住診">住診</option>
         </select>
