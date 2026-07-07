@@ -37,19 +37,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft JhengHei
 table{width:100%;border-collapse:collapse;table-layout:fixed}
 thead tr{background:#3a72a0}
 thead th{color:#e8f2fb;font-size:11px;font-weight:500;padding:7px 6px;text-align:left;white-space:normal;line-height:1.3}
-.col-code{width:5%}
-.col-name{width:15%}
-.col-loc{width:6%}
-.col-batch{width:4%}
-.col-exp{width:9%}
-.col-stock{width:6%}
-.col-act{width:7%}
-.col-used{width:6%}
-.col-rem{width:5%}
-.col-daily{width:6%}
-.col-days{width:6%}
-.col-note{width:11%}
-.col-transfer{width:5%}
+.col-code{width:6%}
+.col-name{width:22%}
+.col-batch{width:5%}
+.col-exp{width:11%}
+.col-stock{width:8%}
+.col-act{width:8%}
+.col-used{width:8%}
+.col-rem{width:6%}
+.col-note{width:15%}
+.col-transfer{width:6%}
 td.act-cell{padding:5px 2px;text-align:center;white-space:nowrap;overflow:hidden}
 tr.odd{background:#d6e8f5}
 tr.even{background:#f0f0f0}
@@ -221,7 +218,7 @@ const SECS=[{key:'regular',label:'常備品項'},{key:'hd',label:'HD 藥水'},{k
 const ALL=Object.values(ITEMS).flat();
 
 function defBatch(){return{qty:0,used:0,exp:'',note:''};}
-function defItem(){return{batches:[defBatch()],dailyUse:0,location:''};}
+function defItem(){return{batches:[defBatch()]};}
 function defCampus(){const s={};ALL.forEach(i=>s[i.code]=defItem());return s;}
 
 let state={douniu:defCampus(),huwei:defCampus()};
@@ -246,12 +243,6 @@ function totalStock(d){return d.batches.reduce((s,b)=>s+(parseInt(b.qty)||0),0);
 function totalUsed(d){return d.batches.reduce((s,b)=>s+(parseInt(b.used)||0),0);}
 function batchRemaining(b){return Math.max(0,(parseInt(b.qty)||0)-(parseInt(b.used)||0));}
 function remaining(d){return d.batches.reduce((s,b)=>s+batchRemaining(b),0);}
-function daysLeft(d){
-  const daily=parseFloat(d.dailyUse)||0;
-  if(daily<=0)return null;
-  const rem=remaining(d);
-  return Math.floor(rem/daily);
-}
 function worstExp(d){
   let w=null;
   d.batches.forEach(b=>{if(!b.exp)return;const m=monthsLeft(b.exp);if(w===null||m<w)w=m;});
@@ -290,15 +281,6 @@ function renderItemRows(campus,item){
   const min=parseInt(safeStock[campus]?.[item.code])||0;
   const isLow=min>0&&rem<min;
   const bc=d.batches.length;
-  const dl=daysLeft(d);
-  let daysCls='';
-  let daysText='—';
-  if(dl!==null){
-    daysText=`${dl} 天`;
-    if(dl<=3)daysCls='rem-zero';
-    else if(dl<=7)daysCls='rem-low';
-    else daysCls='rem-ok';
-  }
   let h='';
   d.batches.forEach((b,idx)=>{
     rowCounter++;
@@ -310,7 +292,6 @@ function renderItemRows(campus,item){
     if(isFirst){
       h+=`<td class="code-cell"${bc>1?` rowspan="${bc}"`:''}>${item.code}</td>`;
       h+=`<td${bc>1?` rowspan="${bc}"`:''}><div style="line-height:1.4">${boldCode(item.name)}</div>${expTag(d)}${isFirst?lowTag(rem,campus,item.code):''}</td>`;
-      h+=`<td${bc>1?` rowspan="${bc}"`:''}><input class="inp" type="text" value="${d.location||''}" onchange="setLocation('${campus}','${item.code}',this.value)" placeholder="儲位，如2B區"></td>`;
     }
     h+=`<td style="text-align:center;color:#6b8a9e;font-size:11px">批${idx+1}</td>`;
     h+=`<td><input class="inp" type="month" value="${b.exp||''}" onchange="setBatch('${campus}','${item.code}',${idx},'exp',this.value)"></td>`;
@@ -322,10 +303,6 @@ function renderItemRows(campus,item){
     }
     h+=`<td><input class="inp inp-center" type="number" min="0" value="${b.used||0}" onchange="setBatch('${campus}','${item.code}',${idx},'used',this.value)"></td>`;
     h+=`<td class="rem-cell ${bRemCls}">${bRem}</td>`;
-    if(isFirst){
-      h+=`<td${bc>1?` rowspan="${bc}"`:''}><input class="inp inp-center" type="number" min="0" step="0.5" value="${d.dailyUse||0}" onchange="setDailyUse('${campus}','${item.code}',this.value)" placeholder="例：3"></td>`;
-      h+=`<td class="rem-cell ${daysCls}"${bc>1?` rowspan="${bc}"`:''}>${daysText}</td>`;
-    }
     h+=`<td><input class="inp" type="text" value="${b.note||''}" onchange="setBatch('${campus}','${item.code}',${idx},'note',this.value)" placeholder="備註"></td>`;
     h+=`<td class="act-cell"><button class="transfer-btn" onclick="openTransfer('${campus}','${item.code}',${idx})" title="調撥到另一院區">⇄</button></td>`;
     h+='</tr>';
@@ -336,10 +313,10 @@ function renderSection(campus,sec){
   const items=ITEMS[sec.key];
   let h=`<div class="tbl-wrap"><div class="tbl-sec-hd">${sec.label}</div>
     <table><thead><tr>
-      <th class="col-code">藥品四碼</th><th class="col-name">藥品名稱</th><th class="col-loc">儲藏位置</th>
+      <th class="col-code">藥品四碼</th><th class="col-name">藥品名稱</th>
       <th class="col-batch">批次</th><th class="col-exp">效期</th>
       <th class="col-stock">庫存袋</th><th class="col-act">新增效期</th>
-      <th class="col-used">使用量</th><th class="col-rem">剩餘</th><th class="col-daily">每日用量</th><th class="col-days">可用天數</th><th class="col-note">備註</th><th class="col-transfer">調撥</th>
+      <th class="col-used">使用量</th><th class="col-rem">剩餘</th><th class="col-note">備註</th><th class="col-transfer">調撥</th>
     </tr></thead><tbody>`;
   items.forEach(item=>h+=renderItemRows(campus,item));
   return h+'</tbody></table></div>';
@@ -417,17 +394,6 @@ function setBatch(campus,code,idx,field,val){
   d.batches[idx][field]=parsed;
   const msgMap={qty:'數量→'+parsed+' 袋',exp:'效期→'+val,used:'使用量→'+parsed+' 袋（剩 '+batchRemaining(d.batches[idx])+' 袋）',note:'備註已更新'};
   addLog(campus,code,`批次${idx+1} ${msgMap[field]}`);
-  refreshCampus(campus);saveAll();
-}
-function setLocation(campus,code,val){
-  getItem(campus,code).location=val;
-  addLog(campus,code,`儲藏位置→${val||'（清空）'}`);
-  saveAll();
-}
-function setDailyUse(campus,code,val){
-  const d=getItem(campus,code);
-  d.dailyUse=Math.max(0,parseFloat(val)||0);
-  addLog(campus,code,`每日用量→${d.dailyUse} 袋/日`);
   refreshCampus(campus);saveAll();
 }
 function addBatch(campus,code){
@@ -523,15 +489,14 @@ function confirmTransfer(){
 }
 
 function exportCSV(){
-  const rows=[['院區','藥品代碼','藥品名稱','儲藏位置','批次','數量(袋)','效期','使用量','批次剩餘','品項總剩餘','每日用量','可用天數','最大可存箱數上限(該院區)','備註']];
+  const rows=[['院區','藥品代碼','藥品名稱','批次','數量(袋)','效期','使用量','批次剩餘','品項總剩餘','最大可存箱數上限(該院區)','備註']];
   ['douniu','huwei'].forEach(campus=>{
     const label=campus==='douniu'?'斗六':'虎尾';
     ALL.forEach(item=>{
       const d=getItem(campus,item.code);
       const totalRem=remaining(d);
-      const dl=daysLeft(d);
       d.batches.forEach((b,i)=>{
-        rows.push([label,item.code,item.name,i===0?d.location||'':'',`批次${i+1}`,b.qty||0,b.exp||'',b.used||0,batchRemaining(b),i===0?totalRem:'',i===0?d.dailyUse||0:'',i===0?(dl===null?'':dl):'',i===0?safeStock[campus]?.[item.code]||0:'',b.note||'']);
+        rows.push([label,item.code,item.name,`批次${i+1}`,b.qty||0,b.exp||'',b.used||0,batchRemaining(b),i===0?totalRem:'',i===0?safeStock[campus]?.[item.code]||0:'',b.note||'']);
       });
     });
   });
