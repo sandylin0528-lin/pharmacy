@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>SharePoint 寫入測試</title>
+<style>
+  body { font-family: "Microsoft JhengHei", sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
+  h1 { font-size: 20px; }
+  button { font-size: 16px; padding: 10px 20px; cursor: pointer; margin: 8px 8px 8px 0; }
+  #log { white-space: pre-wrap; background: #f4f4f4; padding: 16px; border-radius: 8px; margin-top: 20px; font-size: 13px; line-height: 1.6; }
+  .ok { color: #0a7d2c; font-weight: bold; }
+  .err { color: #c0392b; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>SharePoint REST API 寫入測試</h1>
+<p>此頁面用來驗證:院內電腦已登入 AD 帳號的瀏覽器,能否直接呼叫 SharePoint REST API 新增一筆測試資料,藉此確認是否會卡在 CORS 或權限問題。</p>
+
+<label>SharePoint 網站網址:<br>
+<input type="text" id="siteUrl" style="width:100%; padding:6px;" value="https://ntuhugovtw.sharepoint.com/sites/-ylhphr"></label>
+<br><br>
+<label>清單名稱:<br>
+<input type="text" id="listName" style="width:100%; padding:6px;" value="常備藥/急救藥申請流程"></label>
+<br><br>
+
+<button onclick="testRead()">步驟1: 測試讀取(取得 request digest)</button>
+<button onclick="testWrite()">步驟2: 測試寫入(新增一筆測試資料)</button>
+
+<div id="log">尚未執行測試。</div>
+
+<script>
+const logEl = document.getElementById('log');
+function log(msg, cls) {
+  const time = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+  const span = cls ? `<span class="${cls}">${msg}</span>` : msg;
+  logEl.innerHTML += `\n[${time}] ${span}`;
+}
+function clearLog() {
+  logEl.innerHTML = '';
+}
+
+// 步驟1:測試能否讀取 SharePoint,並取得 request digest(寫入前必須先拿到這個 token)
+async function testRead() {
+  clearLog();
+  const siteUrl = document.getElementById('siteUrl').value.replace(/\/$/, '');
+  log('開始測試讀取與取得 request digest...');
+  log(`目標網站: ${siteUrl}`);
+  try {
+    const res = await fetch(`${siteUrl}/_api/contextinfo`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Accept': 'application/json;odata=verbose' }
+    });
+    log(`HTTP 狀態碼: ${res.status}`);
+    if (!res.ok) {
+      const text = await res.text();
+      log(`讀取失敗,回應內容: ${text.substring(0, 500)}`, 'err');
+      return;
+    }
+    const data = await res.json();
+    const digest = data.d.GetContextWebInformation.FormDigestValue;
+    log('成功取得 request digest!這代表已登入的 AD 身份有被 SharePoint 正確辨識,且沒有被 CORS 擋下。', 'ok');
+    log(`Digest (前20碼): ${digest.substring(0, 20)}...`);
+    window.__digest = digest;
+    window.__siteUrl = siteUrl;
+  } catch (err) {
+    log(`發生例外錯誤(很可能是 CORS 被瀏覽器擋下): ${err.message}`, 'err');
+    log('如果看到 "Failed to fetch" 或 CORS 相關字樣,代表跨網域請求在瀏覽器端就被擋掉了,問題出在 CORS。');
+  }
+}
+
+// 步驟2:測試寫入一筆最簡單的測試資料(只填必要欄位,方便之後手動去 SharePoint 清單刪除)
+async function testWrite() {
+  const siteUrl = document.getElementById('siteUrl').value.replace(/\/$/, '');
+  const listName = document.getElementById('listName').value;
+  if (!window.__digest) {
+    log('請先執行「步驟1」成功取得 digest,才能進行寫入測試。', 'err');
+    return;
+  }
+  log('開始測試寫入一筆測試資料...');
+  try {
+    const res = await fetch(`${siteUrl}/_api/web/lists/getbytitle('${encodeURIComponent(listName)}')/items`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json;odata=verbose',
+        'Content-Type': 'application/json;odata=verbose',
+        'X-RequestDigest': window.__digest
+      },
+      body: JSON.stringify({
+        '__metadata': { 'type': 'SP.Data.ListItemEntityTypeForFields' },
+        'Title': '測試資料-請手動刪除',
+        '申請單號': 'TEST-' + Date.now()
+      })
+    });
+    log(`HTTP 狀態碼: ${res.status}`);
+    const text = await res.text();
+    if (!res.ok) {
+      log(`寫入失敗,回應內容: ${text.substring(0, 800)}`, 'err');
+      log('若錯誤訊息提到欄位名稱不存在,代表 Title 或 申請單號 這兩個內部名稱要對照實際清單欄位調整,但這不影響 CORS/權限本身的驗證結果。');
+      return;
+    }
+    log('寫入成功!這證實院內電腦可以直接用已登入的 AD 身份,寫入資料到 SharePoint 清單,完全不需要經過 Power Automate。', 'ok');
+    log('請去 SharePoint 清單確認這筆測試資料,確認後記得手動刪除。');
+  } catch (err) {
+    log(`發生例外錯誤(很可能是 CORS 被瀏覽器擋下): ${err.message}`, 'err');
+  }
+}
+</script>
+
+</body>
+</html>
